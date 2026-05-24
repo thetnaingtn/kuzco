@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "skills": {
+    "create-prd": {
+      "source": "thetnaingtn/create-prd",
+      "sourceType": "github",
+      "skillPath": ".claude/skills/create-prd/SKILL.md",
+      "computedHash": "610b0b76c29cdcbc161e70d6c42bb4e1cee9d8befeb7e05b83bf54fcf963065e"
+    }
+  }
+}
+  
