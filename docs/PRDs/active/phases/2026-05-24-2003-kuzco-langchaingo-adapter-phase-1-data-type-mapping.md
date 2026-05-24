@@ -17,7 +17,7 @@ Establish the foundational type system and pure translation helpers that move da
 
 ### In Scope
 
-- Add `github.com/ardanlabs/kronk v1.25.3` to `go.mod`.
+- Add `github.com/ardanlabs/kronk v1.26.1` to `go.mod`.
 - Define `kuzco.LLM` struct, `Option` functional-options pattern, and `New(k *kronk.Kronk, opts ...Option) *LLM` constructor (method bodies left as stubs for Phase 2).
 - Implement `messagesToKronk([]llms.MessageContent) ([]map[string]any, error)`.
 - Implement `toolsToKronk([]llms.Tool) []map[string]any`.
@@ -39,14 +39,14 @@ Establish the foundational type system and pure translation helpers that move da
 | `llms.Model` interface contract | `github.com/tmc/langchaingo@v0.1.14/llms/llms.go` | Determines required method signatures. |
 | `llms.MessageContent`, `ContentPart` variants | `langchaingo/llms` | `TextContent`, `ToolCall`, `ToolCallResponse` must be handled; binary/image rejected. |
 | `llms.CallOptions` fields | `langchaingo/llms/options.go` | Maps to `temperature`, `top_p`, `max_tokens`, `stop`, `seed`, `tools`, `tool_choice`, `stream`. |
-| kronk `model.D` payload shape | `github.com/ardanlabs/kronk@v1.25.3/sdk/kronk/chat.go` and `sdk/kronk/model` | OpenAI-style chat-completion JSON keys. |
+| kronk `model.D` payload shape | `github.com/ardanlabs/kronk@v1.26.1/sdk/kronk/chat.go` and `sdk/kronk/model` | OpenAI-style chat-completion JSON keys. |
 | kronk `model.ChatResponse` / `Usage` / `Choices` | `kronk/sdk/kronk/response.go`, `kronk/sdk/kronk/model` | Source for content, tool calls, finish reason, token usage. |
 
 ## Dependencies
 
 | Dependency | Type | Required Before | Notes |
 | ---------- | ---- | --------------- | ----- |
-| `kronk` v1.25.3 module available locally | External | Task 1 | Already cached at `~/go/pkg/mod/github.com/ardanlabs/kronk@v1.25.3`. |
+| `kronk` v1.26.1 module available locally | External | Task 1 | Already cached at `~/go/pkg/mod/github.com/ardanlabs/kronk@v1.26.1`. |
 | Decision: default request timeout for `ensureDeadline` | Decision | Task 2 | Phase 2 will use it; Phase 1 just exposes the option. |
 
 ---
@@ -55,13 +55,13 @@ Establish the foundational type system and pure translation helpers that move da
 
 ### Task 1: Add kronk dependency
 
-- [ ] Run `go get github.com/ardanlabs/kronk@v1.25.3`.
+- [ ] Run `go get github.com/ardanlabs/kronk@v1.26.1`.
 - [ ] Run `go mod tidy`.
 - [ ] Confirm `go build ./...` still succeeds with the placeholder `kuzco.go`.
 
 **Acceptance Criteria:**
 
-- `go.mod` lists `github.com/ardanlabs/kronk v1.25.3`.
+- `go.mod` lists `github.com/ardanlabs/kronk v1.26.1`.
 - `go.sum` is updated.
 - `go build ./...` exits 0.
 
@@ -203,7 +203,7 @@ go build ./...
 - [ ] All implementation tasks completed
 - [ ] `go vet ./...` and `go build ./...` clean
 - [ ] `var _ llms.Model = (*LLM)(nil)` compiles
-- [ ] kronk dependency pinned at v1.25.3 in `go.mod`
+- [ ] kronk dependency pinned at v1.26.1 in `go.mod`
 - [ ] No unresolved blockers carried into Phase 2
 
 ---
