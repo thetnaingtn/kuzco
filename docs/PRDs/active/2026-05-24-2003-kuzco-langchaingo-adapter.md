@@ -117,7 +117,7 @@ sequenceDiagram
 
 ### Phase 1: Data / Type Mapping
 
-- [ ] Add `kronk` v1.25.3 dependency to `go.mod` and run `go mod tidy`.
+- [ ] Add `kronk` v1.26.1 dependency to `go.mod` and run `go mod tidy`.
 - [ ] Define `kuzco.LLM` struct and `Option` / `New` constructor in `kuzco.go`.
 - [ ] Implement `messagesToKronk` covering `ChatMessageTypeSystem|Human|AI|Tool|Generic` and `TextContent` / `ToolCall` / `ToolCallResponse` parts (return error on unsupported part such as image/binary).
 - [ ] Implement `toolsToKronk` for `[]llms.Tool` → kronk `tools` array (OpenAI function-tool shape).
@@ -180,7 +180,7 @@ KUZCO_TEST_MODEL_PATH=/path/to/model.gguf go test ./... -run TestLLM -v
 
 | Risk                                                                                  | Likelihood | Mitigation                                                                                          |
 | ------------------------------------------------------------------------------------- | ---------- | --------------------------------------------------------------------------------------------------- |
-| kronk's `model.D` schema drifts between versions, breaking the request mapping.       | Med        | Pin to kronk v1.25.3 in `go.mod`; cover request shape with unit tests; revisit on each kronk bump.  |
+| kronk's `model.D` schema drifts between versions, breaking the request mapping.       | Med        | Pin to kronk v1.26.1 in `go.mod`; cover request shape with unit tests; revisit on each kronk bump.  |
 | `llmtest` probes capabilities by sending one-token requests — kronk requires deadline.| High       | Centralised `ensureDeadline(ctx)` helper that defaults to e.g. 60s when missing.                    |
 | Tool-call semantics differ between kronk's OpenAI-shape and langchaingo's `ToolCall`. | Med        | Explicit translation layer with table-driven tests covering both directions (request and response). |
 | Streaming chunk shape from kronk may not be incremental deltas (could be cumulative). | Med        | Inspect `model.ChatResponse.Delta` vs `Message` in chat.go; emit `Delta` content when present, full content otherwise; document behaviour. |
@@ -208,7 +208,7 @@ KUZCO_TEST_MODEL_PATH=/path/to/model.gguf go test ./... -run TestLLM -v
 | Library  | `stream.go`                 | `GenerateContentStream` implementation.                                           |
 | Library  | `doc.go`                    | Package-level doc + runnable example.                                             |
 | Tests    | `kuzco_test.go`             | `llmtest.TestLLM` integration (env-gated) + unit tests for mappers.               |
-| Deps     | `go.mod`, `go.sum`          | Add `github.com/ardanlabs/kronk v1.25.3`.                                         |
+| Deps     | `go.mod`, `go.sum`          | Add `github.com/ardanlabs/kronk v1.26.1`.                                         |
 
 ---
 
