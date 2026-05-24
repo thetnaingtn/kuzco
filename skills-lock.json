@@ -6,7 +6,12 @@
       "sourceType": "github",
       "skillPath": ".claude/skills/create-prd/SKILL.md",
       "computedHash": "610b0b76c29cdcbc161e70d6c42bb4e1cee9d8befeb7e05b83bf54fcf963065e"
+    },
+    "phase-prd": {
+      "source": "thetnaingtn/phase-prd",
+      "sourceType": "github",
+      "skillPath": ".claude/skills/phase-prd/SKILL.md",
+      "computedHash": "eb6027c4d3a707741aadb3c64ff64c1c50fc0c93db38ce97c12074eceb0a2ebf"
     }
   }
 }
-  
