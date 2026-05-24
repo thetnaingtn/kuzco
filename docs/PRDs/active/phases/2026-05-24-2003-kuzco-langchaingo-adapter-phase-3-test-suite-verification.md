@@ -171,6 +171,11 @@ KUZCO_TEST_MODEL_PATH=/path/to/model.gguf go test ./... -run TestLLM -v -race
 
 - Which small GGUF should be the reference for local verification? Pick one and document it as a comment in `kuzco_test.go`.
 - Should the integration test additionally run `llmtest.ValidateLLM` before `TestLLM` to surface clearer error messages on basic breakage?
+- **Revisit `GenerateContentStream`**: it is NOT part of the `llms.Model` interface — only `Call` and `GenerateContent` are. `llmtest` discovers streaming via reflection (`supportsStreaming` probes for the exact method signature on the concrete type), so the method is an optional capability, not an interface requirement. Phase 2 implemented it to unlock `Capabilities/Streaming` in `llmtest`. During Phase 3, decide whether to:
+  - keep it as-is (current default — needed for the streaming subtest to run),
+  - drop it entirely (skips the streaming capability test cleanly), or
+  - move it behind a build tag / separate type if we want a "core-only" adapter variant.
+  Do not modify `GenerateContentStream` until this decision is made; treat the Phase 2 implementation as the baseline.
 
 ## Definition of Done
 
