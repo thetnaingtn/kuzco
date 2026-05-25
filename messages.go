@@ -23,8 +23,8 @@ func roleToKronk(t llms.ChatMessageType) (string, error) {
 	}
 }
 
-func messagesToKronk(msgs []llms.MessageContent) ([]map[string]any, error) {
-	out := make([]map[string]any, 0, len(msgs))
+func messagesToKronk(msgs []llms.MessageContent) ([]model.D, error) {
+	out := make([]model.D, 0, len(msgs))
 	for _, m := range msgs {
 		role, err := roleToKronk(m.Role)
 		if err != nil {
@@ -32,26 +32,26 @@ func messagesToKronk(msgs []llms.MessageContent) ([]map[string]any, error) {
 		}
 
 		var content string
-		var toolCalls []map[string]any
+		var toolCalls []model.D
 
 		for _, part := range m.Parts {
 			switch p := part.(type) {
 			case llms.TextContent:
 				content += p.Text
 			case llms.ToolCall:
-				tc := map[string]any{
+				tc := model.D{
 					"id":   p.ID,
 					"type": "function",
 				}
 				if p.FunctionCall != nil {
-					tc["function"] = map[string]any{
+					tc["function"] = model.D{
 						"name":      p.FunctionCall.Name,
 						"arguments": p.FunctionCall.Arguments,
 					}
 				}
 				toolCalls = append(toolCalls, tc)
 			case llms.ToolCallResponse:
-				out = append(out, map[string]any{
+				out = append(out, model.D{
 					"role":         "tool",
 					"tool_call_id": p.ToolCallID,
 					"content":      p.Content,
@@ -67,7 +67,7 @@ func messagesToKronk(msgs []llms.MessageContent) ([]map[string]any, error) {
 			continue
 		}
 
-		msg := map[string]any{"role": role}
+		msg := model.D{"role": role}
 		if content != "" {
 			msg["content"] = content
 		}
@@ -79,15 +79,15 @@ func messagesToKronk(msgs []llms.MessageContent) ([]map[string]any, error) {
 	return out, nil
 }
 
-func toolsToKronk(tools []llms.Tool) []map[string]any {
+func toolsToKronk(tools []llms.Tool) []model.D {
 	if len(tools) == 0 {
 		return nil
 	}
-	out := make([]map[string]any, 0, len(tools))
+	out := make([]model.D, 0, len(tools))
 	for _, t := range tools {
-		out = append(out, map[string]any{
+		out = append(out, model.D{
 			"type": t.Type,
-			"function": map[string]any{
+			"function": model.D{
 				"name":        t.Function.Name,
 				"description": t.Function.Description,
 				"parameters":  t.Function.Parameters,
@@ -116,8 +116,14 @@ func applyCallOptions(d model.D, opts llms.CallOptions) {
 	if len(opts.Tools) > 0 {
 		d["tools"] = toolsToKronk(opts.Tools)
 	}
-	if opts.ToolChoice != nil {
+	switch {
+	case opts.ToolChoice != nil:
 		d["tool_choice"] = opts.ToolChoice
+	case len(opts.Tools) > 0:
+		// langchaingo callers (including llmtest) commonly pass Tools
+		// without setting ToolChoice; default to "auto" so the model
+		// is actually prompted to emit tool calls.
+		d["tool_choice"] = "auto"
 	}
 	if opts.StreamingFunc != nil {
 		d["stream"] = true
