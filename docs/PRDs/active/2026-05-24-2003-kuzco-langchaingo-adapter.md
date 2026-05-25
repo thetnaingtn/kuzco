@@ -29,7 +29,7 @@ Compliance is proven by running `llmtest.TestLLM` from `github.com/tmc/langchain
 
 ## Summary
 
-_To be completed after implementation._
+Shipped `github.com/thetnaingtn/kuzco`, a langchaingo `llms.Model` adapter over `*kronk.Kronk` covering `Call`, `GenerateContent`, and `GenerateContentStream` with full message/tool/option/response mapping (`messages.go`). Verified end-to-end against the official `llmtest.TestLLM` suite — Core (Call, GenerateContent), Streaming, ToolCalls, TokenCounting, and Caching subtests all pass against a real downloaded GGUF (Gemma E4B-it Q4_K_S). The integration test (`kuzco_test.go`) downloads the matching llama.cpp library bundle and the GGUF on demand via kronk's own `libs` and `models` packages, gated on a single `MODEL_URL` env var so CI without network skips cleanly. Integration testing surfaced and fixed one Phase 2 bug: `messagesToKronk`/`toolsToKronk` were returning `[]map[string]any`, which failed kronk's `messages.([]model.D)` validator type-assertion despite identical underlying layout.
 
 ---
 

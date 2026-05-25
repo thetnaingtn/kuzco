@@ -38,34 +38,38 @@ Prove the adapter is correct by running the official `llmtest.TestLLM` suite aga
 | `llmtest.TestLLM(t, model)` entry point | `langchaingo/testing/llmtest/llmtest.go` | Runs Core (`Call`, `GenerateContent`) and probed Capabilities (`Streaming`, `ToolCalls`, `Reasoning`, `Caching`, `TokenCounting`). |
 | Phase 2 adapter | `kuzco.go`, `stream.go` | The system under test. |
 | Phase 1 mappers | `messages.go` | Unit-tested here directly. |
-| `KUZCO_TEST_MODEL_PATH` env var | New convention | Path to a local GGUF; when unset, integration test calls `t.Skip`. |
+| `MODEL_URL` env var | New convention | Fully qualified HuggingFace URL of a GGUF model; when unset, integration test calls `t.Skip`. The test downloads the model via `models.Models.Download` at runtime — no local pre-staging. |
+| `KUZCO_TEST_CACHE_DIR` env var | New convention (optional) | Base directory for cached libs/models. When unset, kronk's defaults (`~/.kronk/`) are used so repeat runs reuse downloads. |
+| llama.cpp library bundle | Downloaded at test time | Fetched via `libs.Libs.Download`; kronk is pinned to a known llama.cpp release, so the test does not require a user-supplied library path. |
 
 ## Dependencies
 
 | Dependency | Type | Required Before | Notes |
 | ---------- | ---- | --------------- | ----- |
 | Phase 2 complete | Code | Task 1 | Adapter methods must be implemented. |
-| Local GGUF available | External | Task 1 manual run | Required for the integration test to actually execute (CI may skip). |
+| Network access to HuggingFace | External | Task 1 manual run | The integration test downloads both the llama.cpp library bundle and the GGUF model. CI without network must skip by leaving `MODEL_URL` unset. |
 
 ---
 
 ## Implementation Tasks
 
-### Task 1: Strip placeholder, add integration test
+### Task 1: Strip placeholder, add download-driven integration test
 
-- [ ] In `kuzco.go`, remove the placeholder `TestMe` and its imports (`testing`, `llmtest`) — package file stays implementation-only.
+- [ ] In `kuzco.go`, remove the placeholder `TestMe` and its imports (`testing`, `llmtest`) if any remain — package file stays implementation-only. (In the current tree the placeholder is already absent.)
 - [ ] Create `kuzco_test.go` (package `kuzco_test` to keep it black-box):
-  - Look up `os.Getenv("KUZCO_TEST_MODEL_PATH")`; if empty, `t.Skip("set KUZCO_TEST_MODEL_PATH to run llmtest integration")`.
-  - Call `kronk.Init(...)` if/where required (verify against `kronk/sdk/kronk/init.go`), build `*kronk.Kronk` via `kronk.New(model.WithModelPath(path))`.
-  - Defer any kronk shutdown method if exposed.
-  - Build `llm := kuzco.New(k)`.
-  - Call `llmtest.TestLLM(t, llm)`.
+  - Look up `os.Getenv("MODEL_URL")`; if empty, `t.Skip("set MODEL_URL to run llmtest integration")`.
+  - Build a logger (`applog.FmtLogger`) and resolve an optional `KUZCO_TEST_CACHE_DIR` base path.
+  - Download the llama.cpp library bundle: `lib, _ := libs.New(libs.WithBasePath(cacheDir))` (or `libs.New()` when cacheDir is empty); `lib.Download(ctx, log)`; then `kronk.Init(kronk.WithLibPath(lib.LibsPath()))`.
+  - Download the GGUF model: `mods, _ := models.NewWithPaths(cacheDir)` (or `models.New()`); `mp, err := mods.Download(ctx, log, modelURL)`. `Download` accepts a fully qualified URL directly.
+  - Build kronk with the downloaded files: `kronk.New(kmodel.WithModelFiles(mp.ModelFiles))` (alias `kmodel "github.com/ardanlabs/kronk/sdk/kronk/model"`). `t.Cleanup` calls `k.Unload(ctx)`.
+  - `llmtest.TestLLM(t, kuzco.New(k))`.
 - [ ] Function name `TestLLM` so it runs under `go test -run TestLLM`.
 
 **Acceptance Criteria:**
 
-- `go test ./...` with the env var unset passes (test is skipped, not failed).
-- `KUZCO_TEST_MODEL_PATH=… go test ./... -run TestLLM -v` runs `Core/Call`, `Core/GenerateContent`, and the `Capabilities/Streaming` + `Capabilities/TokenCounting` subtests with all green.
+- `go test ./...` with `MODEL_URL` unset passes (test is skipped, not failed).
+- `MODEL_URL=https://huggingface.co/.../model.gguf go test ./... -run TestLLM -v` downloads the library bundle + model on first run, runs `Core/Call`, `Core/GenerateContent`, `Capabilities/Streaming`, and `Capabilities/TokenCounting` subtests, and reports all green.
+- A second run with the same `MODEL_URL` reuses the on-disk cache (no re-download).
 
 **Files / Areas:**
 
@@ -146,8 +150,11 @@ Prove the adapter is correct by running the official `llmtest.TestLLM` suite aga
 ```bash
 go vet ./...
 go test ./... -race -count=1
-# Full integration run (requires GGUF):
-KUZCO_TEST_MODEL_PATH=/path/to/model.gguf go test ./... -run TestLLM -v -race
+# Full integration run (downloads library bundle + model on first run):
+MODEL_URL=https://huggingface.co/.../model.gguf go test ./... -run TestLLM -v -race
+# Optional: pin the cache location (otherwise ~/.kronk/ is used).
+KUZCO_TEST_CACHE_DIR=/tmp/kuzco-cache \
+MODEL_URL=https://huggingface.co/.../model.gguf go test ./... -run TestLLM -v -race
 ```
 
 ### Manual
@@ -165,11 +172,11 @@ KUZCO_TEST_MODEL_PATH=/path/to/model.gguf go test ./... -run TestLLM -v -race
 | `llmtest`'s `Capabilities/ToolCalls` subtest fires only for tool-capable models — failure may mean model, not adapter | Medium | Use a known tool-calling instruct model (e.g. a small Qwen/Llama variant) when verifying; document the recommended model in `kuzco_test.go`. |
 | `Capabilities/Caching` may take noticeable time on a slow local box | Low | Acceptable — it's an integration test gated by env var. |
 | Race detector flags the streaming goroutine | Medium | Make sure the channel send and ctx-cancel happen in the goroutine, not the caller; only close once. |
-| `kronk.Init` requires a library path the test machine doesn't have | Medium | Document the required `kronk.Init(...)` call and library path env var (e.g. `KRONK_LIB`) in the test file's top comment. |
+| Test machine lacks network access or the HuggingFace URL is gated | Medium | The library bundle and model are downloaded at test time; document `MODEL_URL`, `KUZCO_TEST_CACHE_DIR`, and `KRONK_HF_TOKEN` in the test file's top comment. CI without network must leave `MODEL_URL` unset so the test skips. |
 
 ## Open Questions
 
-- Which small GGUF should be the reference for local verification? Pick one and document it as a comment in `kuzco_test.go`.
+- Which small GGUF should be the reference for local verification? **Resolved**: documented in the file-top comment of `kuzco_test.go` (Qwen2.5-1.5B-Instruct-Q8_0 from `unsloth/Qwen2.5-1.5B-Instruct-GGUF` as a small, tool-capable starting point). Callers can override via `MODEL_URL`.
 - Should the integration test additionally run `llmtest.ValidateLLM` before `TestLLM` to surface clearer error messages on basic breakage?
 - **Revisit `GenerateContentStream`**: it is NOT part of the `llms.Model` interface — only `Call` and `GenerateContent` are. `llmtest` discovers streaming via reflection (`supportsStreaming` probes for the exact method signature on the concrete type), so the method is an optional capability, not an interface requirement. Phase 2 implemented it to unlock `Capabilities/Streaming` in `llmtest`. During Phase 3, decide whether to:
   - keep it as-is (current default — needed for the streaming subtest to run),
