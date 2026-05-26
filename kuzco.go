@@ -8,7 +8,13 @@ import (
 
 	"github.com/ardanlabs/kronk/sdk/kronk"
 	"github.com/ardanlabs/kronk/sdk/kronk/model"
+	"github.com/tmc/langchaingo/embeddings"
 	"github.com/tmc/langchaingo/llms"
+)
+
+var (
+	_ llms.Model                = (*LLM)(nil)
+	_ embeddings.EmbedderClient = (*LLM)(nil)
 )
 
 type LLM struct {
@@ -137,5 +143,3 @@ func (l *LLM) ensureDeadline(ctx context.Context) (context.Context, context.Canc
 	}
 	return context.WithTimeout(ctx, l.defaultTimeout)
 }
-
-var _ llms.Model = (*LLM)(nil)
