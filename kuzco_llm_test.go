@@ -1,5 +1,15 @@
+//go:build integration
+
 // Package kuzco_test runs the langchaingo llmtest suite against a real
 // *kronk.Kronk to verify the adapter end-to-end.
+//
+// This file is compiled in only when the `integration` build tag is set:
+//
+//	go test -tags=integration ./...
+//
+// Without the tag the file is excluded from the build entirely, so the
+// default `go test ./...` invocation does not pull in kronk or download
+// any GGUFs. With the tag set but `MODEL_URL` unset, TestLLM skips.
 //
 // The integration test downloads both the native llama.cpp library bundle
 // (via kronk's libs downloader, which pins the matching release for the
@@ -25,12 +35,16 @@
 // Example:
 //
 //	MODEL_URL=https://huggingface.co/unsloth/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/Qwen2.5-1.5B-Instruct-Q8_0.gguf \
-//	  go test ./... -run TestLLM -v -race
+//	  go test -tags=integration ./... -run TestLLM -v -race
+//
+// The embedding integration test lives in kuzco_embedding_test.go, shares
+// this same build tag, and gates on its own EMBED_MODEL_URL env var.
 package kuzco_test
 
 import (
 	"context"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/ardanlabs/kronk/sdk/kronk"
@@ -42,11 +56,6 @@ import (
 
 	"github.com/thetnaingtn/kuzco"
 )
-
-// TestCompile is a no-op that ensures the package compiles and the
-// llms.Model interface assertion in kuzco.go holds, even when the
-// integration model isn't available.
-func TestCompile(t *testing.T) {}
 
 func TestLLM(t *testing.T) {
 	modelURL := os.Getenv("MODEL_URL")
@@ -99,6 +108,23 @@ func TestLLM(t *testing.T) {
 	}
 	t.Cleanup(func() {
 		_ = k.Unload(context.Background())
+	})
+
+	t.Run("CreateEmbedding_unsupported", func(t *testing.T) {
+		llm := kuzco.New(k)
+		_, err := llm.CreateEmbedding(ctx, []string{"x"})
+		if err == nil {
+			t.Fatalf("want error from CreateEmbedding on chat-only model, got nil")
+		}
+		msg := err.Error()
+		if !strings.HasPrefix(msg, "kuzco: embeddings:") {
+			t.Logf("err = %v", err)
+			t.Fatalf("want error prefixed with %q, got %q", "kuzco: embeddings:", msg)
+		}
+		if !strings.Contains(msg, "doesn't support embedding") {
+			t.Logf("err = %v", err)
+			t.Fatalf("want error containing %q, got %q", "doesn't support embedding", msg)
+		}
 	})
 
 	llmtest.TestLLM(t, kuzco.New(k))
