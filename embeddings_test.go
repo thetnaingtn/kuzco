@@ -5,7 +5,74 @@ import (
 	"testing"
 
 	"github.com/ardanlabs/kronk/sdk/kronk/model"
+	"github.com/google/go-cmp/cmp"
 )
+
+func TestBuildEmbedPayload(t *testing.T) {
+	texts := []string{"hello", "world"}
+
+	tests := []struct {
+		name string
+		opts []Option
+		want model.D
+	}{
+		{
+			name: "no opts",
+			opts: nil,
+			want: model.D{"input": texts},
+		},
+		{
+			name: "truncate true only",
+			opts: []Option{WithEmbeddingTruncate(true)},
+			want: model.D{"input": texts, "truncate": true},
+		},
+		{
+			name: "truncate false only",
+			opts: []Option{WithEmbeddingTruncate(false)},
+			want: model.D{"input": texts, "truncate": false},
+		},
+		{
+			name: "direction left only",
+			opts: []Option{WithEmbeddingTruncateDirection(TruncateLeft)},
+			want: model.D{"input": texts, "truncate_direction": "left"},
+		},
+		{
+			name: "direction right only",
+			opts: []Option{WithEmbeddingTruncateDirection(TruncateRight)},
+			want: model.D{"input": texts, "truncate_direction": "right"},
+		},
+		{
+			name: "dimension 256 only",
+			opts: []Option{WithEmbeddingDimension(256)},
+			want: model.D{"input": texts, "dimension": 256},
+		},
+		{
+			name: "all three combined",
+			opts: []Option{
+				WithEmbeddingTruncate(true),
+				WithEmbeddingTruncateDirection(TruncateLeft),
+				WithEmbeddingDimension(256),
+			},
+			want: model.D{
+				"input":              texts,
+				"truncate":           true,
+				"truncate_direction": "left",
+				"dimension":          256,
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			l := New(nil, tc.opts...)
+			got := l.buildEmbedPayload(texts)
+
+			if diff := cmp.Diff(tc.want, got); diff != "" {
+				t.Errorf("buildEmbedPayload mismatch (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
 
 func TestEmbedResponseToVectors(t *testing.T) {
 	tests := []struct {

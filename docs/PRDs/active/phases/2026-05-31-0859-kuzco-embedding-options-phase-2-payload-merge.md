@@ -53,13 +53,13 @@ Extract the payload construction into a private helper (`buildEmbedPayload`) so 
 
 ### Task 1: Extract `buildEmbedPayload` helper and refactor `CreateEmbedding`
 
-- [ ] In `embeddings.go`, add `func (l *LLM) buildEmbedPayload(texts []string) model.D`.
-- [ ] Start the map with `model.D{"input": texts}`.
-- [ ] If `l.embed.truncate != nil`, set `d["truncate"] = *l.embed.truncate`.
-- [ ] If `l.embed.truncateDirection != ""`, set `d["truncate_direction"] = string(l.embed.truncateDirection)`.
-- [ ] If `l.embed.dimension > 0`, set `d["dimension"] = l.embed.dimension`.
-- [ ] In `CreateEmbedding`, replace the inline map literal with `d := l.buildEmbedPayload(texts)` and pass `d` to `l.k.Embeddings(ctx, d)`.
-- [ ] Preserve the existing empty-input guard (`errEmptyInput`) and `ensureDeadline` call ordering exactly.
+- [x] In `embeddings.go`, add `func (l *LLM) buildEmbedPayload(texts []string) model.D`.
+- [x] Start the map with `model.D{"input": texts}`.
+- [x] If `l.embed.truncate != nil`, set `d["truncate"] = *l.embed.truncate`.
+- [x] If `l.embed.truncateDirection != ""`, set `d["truncate_direction"] = string(l.embed.truncateDirection)`.
+- [x] If `l.embed.dimension > 0`, set `d["dimension"] = l.embed.dimension`.
+- [x] In `CreateEmbedding`, replace the inline map literal with `d := l.buildEmbedPayload(texts)` and pass `d` to `l.k.Embeddings(ctx, d)`.
+- [x] Preserve the existing empty-input guard (`errEmptyInput`) and `ensureDeadline` call ordering exactly.
 
 **Acceptance Criteria:**
 
@@ -73,7 +73,7 @@ Extract the payload construction into a private helper (`buildEmbedPayload`) so 
 
 ### Task 2: Table-driven payload tests
 
-- [ ] In `embeddings_test.go` (in `package kuzco` so the test can call the unexported helper directly), add `TestBuildEmbedPayload` with table cases:
+- [x] In `embeddings_test.go` (in `package kuzco` so the test can call the unexported helper directly), add `TestBuildEmbedPayload` with table cases:
   - **no opts** → keys exactly `{"input"}`.
   - **truncate=true only** → keys `{"input", "truncate"}`, `truncate == true`.
   - **truncate=false only** (set via `WithEmbeddingTruncate(false)`) → keys `{"input", "truncate"}`, `truncate == false`. This proves the pointer-bool sentinel works.
@@ -81,8 +81,8 @@ Extract the payload construction into a private helper (`buildEmbedPayload`) so 
   - **direction=right only** → keys `{"input", "truncate_direction"}`, value `"right"`.
   - **dimension=256 only** → keys `{"input", "dimension"}`, value `256`.
   - **all three combined** → keys `{"input", "truncate", "truncate_direction", "dimension"}` with expected values.
-- [ ] Each case builds `*LLM` via `New(nil, opts...)` (nil kronk is fine — the helper does not call it) and inspects the returned `model.D` directly.
-- [ ] Assert key set with a helper like `keysOf(d)` or by checking `len(d)` plus explicit lookups — avoid `reflect.DeepEqual` against a full literal because `texts` is a slice and equality semantics get noisy.
+- [x] Each case builds `*LLM` via `New(nil, opts...)` (nil kronk is fine — the helper does not call it) and inspects the returned `model.D` directly.
+- [x] Assert the full payload against an expected `model.D` literal using `cmp.Diff` from `github.com/google/go-cmp/cmp`. go-cmp deep-compares the map and the `texts` slice correctly, so a single full-literal comparison per case is clean — this is why we don't fall back to `reflect.DeepEqual` (noisy slice semantics) or a hand-rolled key-set helper.
 
 **Acceptance Criteria:**
 
@@ -116,7 +116,7 @@ go test -v -run TestCompile -count=1 ./...
 ### Manual
 
 1. Inspect a `git diff` of `embeddings.go` and confirm the no-opts path produces the same map literal as today (just routed through the helper).
-2. Spot-check one unit test by inverting the expected key set — confirm it fails — then revert. Proves the assertions are tight.
+2. Spot-check one unit test by tweaking its expected `model.D` literal — confirm `cmp.Diff` reports the diff and the test fails — then revert. Proves the assertions are tight.
 
 ---
 
@@ -124,8 +124,8 @@ go test -v -run TestCompile -count=1 ./...
 
 | Risk | Likelihood | Mitigation |
 | ---- | ---------- | ---------- |
-| Helper accidentally allocates the map with extra keys when no opts set | Medium | The "no opts" table case asserts `len(d) == 1` and key set `{"input"}` exactly. |
-| Map iteration order leaks into a test assertion | Low | Tests assert on keys/values directly, never on map literal equality. |
+| Helper accidentally allocates the map with extra keys when no opts set | Medium | The "no opts" table case asserts the full payload equals `model.D{"input": texts}` via `cmp.Diff` — any extra key shows up as a diff. |
+| Map iteration order leaks into a test assertion | Low | `cmp.Diff` compares maps by key, order-independent; no reliance on iteration order. |
 | `model.D` field type mismatch (e.g. passing `int64` where kronk expects `int`) | Low | `dimension` is plain `int`; kronk decodes via `any`-typed map so Go's default int kind is fine. |
 | Refactor changes error wrapping or deadline behavior | Low | Task 1 explicitly says preserve the empty-input guard and `ensureDeadline` ordering; spot-check in code review. |
 
@@ -135,14 +135,14 @@ go test -v -run TestCompile -count=1 ./...
 
 ## Definition of Done
 
-- [ ] All implementation tasks completed
-- [ ] Acceptance criteria verified
-- [ ] `go test -v -count=1 ./...` passes
-- [ ] `go vet ./...` clean
-- [ ] No unresolved blockers remain
+- [x] All implementation tasks completed
+- [x] Acceptance criteria verified
+- [x] `go test -v -count=1 ./...` passes
+- [x] `go vet ./...` clean
+- [x] No unresolved blockers remain
 
 ---
 
 ## Handoff Notes
 
-Phase 3 will exercise the full path against a real embed model. Keep `buildEmbedPayload` exported-package-only (lowercase) — it is a test seam, not a public API. If the table-test helper for key-set comparison is useful elsewhere, leave it in `embeddings_test.go`; do not move it to a shared helpers file until a second user appears.
+Phase 3 will exercise the full path against a real embed model. Keep `buildEmbedPayload` exported-package-only (lowercase) — it is a test seam, not a public API. Payload assertions use `github.com/google/go-cmp/cmp` (`cmp.Diff` against a full `model.D` literal), now a direct module dependency; reuse it for any further payload-shape tests rather than hand-rolling key-set helpers.
