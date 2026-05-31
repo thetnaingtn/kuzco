@@ -52,9 +52,9 @@ This phase ships compile-time additions only. `CreateEmbedding`'s runtime payloa
 
 ### Task 1: Add `TruncateDirection` type and constants
 
-- [ ] In `kuzco.go`, declare `type TruncateDirection string`.
-- [ ] Declare exported constants `TruncateRight TruncateDirection = "right"` and `TruncateLeft TruncateDirection = "left"`.
-- [ ] Place these near the top of the file, above `LLM`, alongside the existing interface assertions.
+- [x] In `kuzco.go`, declare `type TruncateDirection string`.
+- [x] Declare exported constants `TruncateRight TruncateDirection = "right"` and `TruncateLeft TruncateDirection = "left"`.
+- [x] Place these near the top of the file, above `LLM`, alongside the existing interface assertions.
 
 **Acceptance Criteria:**
 
@@ -67,9 +67,9 @@ This phase ships compile-time additions only. `CreateEmbedding`'s runtime payloa
 
 ### Task 2: Add `embedOpts` struct and field on `LLM`
 
-- [ ] Declare an unexported `embedOpts` struct with fields `truncate *bool`, `truncateDirection TruncateDirection`, `dimension int`.
-- [ ] Add an `embed embedOpts` field on `LLM` (or inline the fields — prefer the struct for grouping).
-- [ ] Confirm `New` leaves the new field at its zero value (no constructor change needed beyond the field declaration).
+- [x] Declare an unexported `embedOpts` struct with fields `truncate *bool`, `truncateDirection TruncateDirection`, `dimension int`.
+- [x] Add an `embed embedOpts` field on `LLM` (or inline the fields — prefer the struct for grouping).
+- [x] Confirm `New` leaves the new field at its zero value (no constructor change needed beyond the field declaration).
 
 **Acceptance Criteria:**
 
@@ -82,15 +82,15 @@ This phase ships compile-time additions only. `CreateEmbedding`'s runtime payloa
 
 ### Task 3: Implement the three constructor options + unit tests
 
-- [ ] Add `WithEmbeddingTruncate(v bool) Option` that sets `l.embed.truncate = &v`.
-- [ ] Add `WithEmbeddingTruncateDirection(d TruncateDirection) Option` that sets `l.embed.truncateDirection = d` **only when** `d == TruncateRight || d == TruncateLeft`; otherwise no-op.
-- [ ] Add `WithEmbeddingDimension(n int) Option` that sets `l.embed.dimension = n` **only when** `n > 0`; otherwise no-op.
-- [ ] In `embeddings_test.go` (or a new `options_test.go` if preferred — match existing test layout), add unit tests:
+- [x] Add `WithEmbeddingTruncate(v bool) Option` that sets `l.embed.truncate = &v`.
+- [x] Add `WithEmbeddingTruncateDirection(d TruncateDirection) Option` that sets `l.embed.truncateDirection = d` **only when** `d == TruncateRight || d == TruncateLeft`; otherwise no-op.
+- [x] Add `WithEmbeddingDimension(n int) Option` that sets `l.embed.dimension = n` **only when** `n > 0`; otherwise no-op.
+- [x] In `embeddings_test.go` (or a new `options_test.go` if preferred — match existing test layout), add unit tests:
   - Each option, when applied via `New`, writes the expected value into `embed`.
   - `WithEmbeddingTruncate(false)` produces a non-nil pointer to `false` (distinguishable from unset).
   - `WithEmbeddingTruncateDirection("up")` leaves `embed.truncateDirection` empty.
   - `WithEmbeddingDimension(0)` and `WithEmbeddingDimension(-1)` leave `embed.dimension == 0`.
-- [ ] Tests live in `package kuzco` (not `_test`) so they can read the unexported `embed` field directly.
+- [x] Tests live in `package kuzco` (not `_test`) so they can read the unexported `embed` field directly.
 
 **Acceptance Criteria:**
 
@@ -135,11 +135,11 @@ go vet ./...
 
 ## Definition of Done
 
-- [ ] All implementation tasks completed
-- [ ] Acceptance criteria verified
-- [ ] `go test -v -count=1 ./...` passes
-- [ ] `go vet ./...` clean
-- [ ] No unresolved blockers remain
+- [x] All implementation tasks completed
+- [x] Acceptance criteria verified
+- [x] `go test -v -count=1 ./...` passes
+- [x] `go vet ./...` clean
+- [x] No unresolved blockers remain
 
 ---
 

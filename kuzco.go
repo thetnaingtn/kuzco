@@ -17,9 +17,29 @@ var (
 	_ embeddings.EmbedderClient = (*LLM)(nil)
 )
 
+// TruncateDirection selects which end kronk truncates when embedding input
+// exceeds the model's context. Values match kronk's documented strings
+// (see kronk/sdk/kronk/embedding.go).
+type TruncateDirection string
+
+const (
+	TruncateRight TruncateDirection = "right"
+	TruncateLeft  TruncateDirection = "left"
+)
+
+// embedOpts holds the embedding-specific options written by the WithEmbedding*
+// constructor options. It is read when building the kronk embedding payload.
+// See more details at https://pkg.go.dev/github.com/ardanlabs/kronk/sdk/kronk#Kronk.Embeddings
+type embedOpts struct {
+	truncate          *bool // nil = unset, distinct from set-to-false
+	truncateDirection TruncateDirection
+	dimension         int
+}
+
 type LLM struct {
 	k              *kronk.Kronk
 	defaultTimeout time.Duration
+	embed          embedOpts
 }
 
 type Option func(*LLM)
@@ -27,6 +47,35 @@ type Option func(*LLM)
 func WithDefaultTimeout(d time.Duration) Option {
 	return func(l *LLM) {
 		l.defaultTimeout = d
+	}
+}
+
+// WithEmbeddingTruncate controls whether kronk truncates embedding input that
+// exceeds the model's context. The value is stored as a pointer so that an
+// explicit false is distinguishable from the option never being set.
+func WithEmbeddingTruncate(v bool) Option {
+	return func(l *LLM) {
+		l.embed.truncate = &v
+	}
+}
+
+// WithEmbeddingTruncateDirection selects which end kronk truncates. Invalid
+// directions are a silent no-op.
+func WithEmbeddingTruncateDirection(d TruncateDirection) Option {
+	return func(l *LLM) {
+		if d == TruncateRight || d == TruncateLeft {
+			l.embed.truncateDirection = d
+		}
+	}
+}
+
+// WithEmbeddingDimension sets the output embedding dimension. Non-positive
+// values are a silent no-op.
+func WithEmbeddingDimension(n int) Option {
+	return func(l *LLM) {
+		if n > 0 {
+			l.embed.dimension = n
+		}
 	}
 }
 
