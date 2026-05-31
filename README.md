@@ -189,4 +189,4 @@ Integration tests gate on environment variables and skip cleanly when unset:
 
 ## License
 
-See repository for license details.
+Licensed under the Apache License, Version 2.0. See [LICENSE](./LICENSE) for details.
