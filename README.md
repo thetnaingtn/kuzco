@@ -141,6 +141,10 @@ if err != nil {
 }
 fmt.Println(len(vec))
 ```
+### Examples
+
+See more [examples](https://github.com/thetnaingtn/kronk-examples) for how to use kronk with kuzco
+
 
 ## Options
 
