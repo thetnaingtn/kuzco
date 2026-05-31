@@ -1,5 +1,4 @@
 # kuzco
-<img src="./kuzco.png"/>
 
 `kuzco` is a thin Go adapter that lets you drive a local LLM through
 [langchaingo](https://github.com/tmc/langchaingo). It wraps an
