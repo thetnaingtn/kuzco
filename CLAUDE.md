@@ -24,4 +24,4 @@ These are easy to regress — verify before changing translation code:
 - **Default `ToolChoice` to `"auto"`** when `Tools` are present and the caller didn't set one. langchaingo callers usually omit it, and without `"auto"` the model won't emit tool calls.
 - **Always ensure a context deadline** via `ensureDeadline` (default 60s). Kronk requires one; passing a deadline-less context will fail.
 - **Embeddings** only work against models where `modelInfo.IsEmbedModel` is true.
-- **Embedding options are configured on `kuzco.New`, not per call** — langchaingo's `EmbedderClient.CreateEmbedding` signature has no `Option` parameter, so `WithEmbeddingTruncate`, `WithEmbeddingTruncateDirection`, and `WithEmbeddingDimension` must be passed at construction time.
+- **Embedding options are configured on `kuzco.New`, not per call** — langchaingo's `EmbedderClient.CreateEmbedding` signature has no `Option` parameter, so `WithEmbeddingTruncate` and `WithEmbeddingTruncateDirection` must be passed at construction time.

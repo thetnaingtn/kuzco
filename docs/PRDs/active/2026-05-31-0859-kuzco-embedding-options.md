@@ -1,7 +1,7 @@
 # Kuzco: Embedding Options (truncate, truncate_direction, dimension)
 
 **PRD ID**: PRD-2026-05-31-0859
-**Status**: In Review (dimension option unverified — see Summary)
+**Status**: Completed (dimension option deferred to Future Work — see Summary)
 **Complexity**: Low
 **Created**: May 31, 2026
 **Author**: thetnaingtn
@@ -42,9 +42,7 @@ Implementation outline:
 
 Shipped across three phases. Phase 1 added the typed `TruncateDirection` (`TruncateRight`/`TruncateLeft`), the unexported `embedOpts` field on `*LLM`, and the three constructor options (`WithEmbeddingTruncate`, `WithEmbeddingTruncateDirection`, `WithEmbeddingDimension`) with zero-value/invalid-value guards. Phase 2 wired them through `buildEmbedPayload` in `embeddings.go`, merging `truncate` / `truncate_direction` / `dimension` into the kronk `model.D` only when set so the no-options payload stays byte-identical to before. Phase 3 added `integration`-tagged sub-tests `TruncateRoundTrip` (proves `WithEmbeddingTruncate(true)` rescues an over-long input the baseline rejects) and `MatryoshkaDimension` (opt-in via `EMBED_MODEL_MATRYOSHKA_DIMS`, asserts requested vector lengths), plus the `CLAUDE.md` gotcha and a package overview with usage example.
 
-Deviations from the original plan: (1) the package doc comment was added to the existing `doc.go` rather than `kuzco.go` — `doc.go` already held the canonical package comment and Go permits only one. (2) Integration was run against the user-specified `Qwen3-Embedding-0.6B-Q8_0` (native dim 1024) instead of the originally recommended `bge-small-en-v1.5`.
-
-Open finding from integration: `truncate` round-trips correctly (`TruncateRoundTrip` passes), but `WithEmbeddingDimension` does **not** take effect against Qwen3-Embedding-0.6B — kronk returns the native 1024-dim vector for requested dims 128/256/512 (only 1024 trivially matches). It is not yet confirmed whether this is a wrong request-key in `buildEmbedPayload`, a kronk version limitation, or that this GGUF doesn't expose Matryoshka truncation server-side. The PRD is therefore **not** fully verified for the `dimension` option; a follow-up should resolve this before relying on Matryoshka downsizing.
+Deviations from the original plan: (1) the package doc comment was added to the existing `doc.go` rather than `kuzco.go` — `doc.go` already held the canonical package comment and Go permits only one. (2) Integration was run against the user-specified `Qwen3-Embedding-0.6B-Q8_0` instead of the originally recommended `bge-small-en-v1.5`. (3) **The `dimension` / Matryoshka option was dropped from this PRD's delivered scope.** Integration against Qwen3-Embedding-0.6B showed `WithEmbeddingDimension` had no effect — kronk returned the native 1024-dim vector for requested dims 128/256/512 — so `WithEmbeddingDimension`, its unit tests, and the `MatryoshkaDimension` integration sub-test were removed. The shipped surface is `WithEmbeddingTruncate` and `WithEmbeddingTruncateDirection`, both verified end-to-end (`TruncateRoundTrip` passes). Re-introducing dimension support is captured under **Future Work** below.
 
 ---
 
@@ -176,8 +174,8 @@ go test -v ./...
 
 ## Definition of Done
 
-- [x] Implementation complete
-- [~] Tests passing — unit (`go test -v ./...`) green; integration `MatryoshkaDimension` fails (dimension not honored, see Summary)
+- [x] Implementation complete (dimension option dropped — see Summary / Future Work)
+- [x] Tests passing — unit (`go test -v ./...`) green; integration `TruncateRoundTrip` passes
 - [x] No new vet warnings (`go vet ./...`)
 - [x] CLAUDE.md and package doc updated
 - [ ] PR approved and merged via Conventional Commit (`feat: embedding options for kronk`)
@@ -191,8 +189,44 @@ go test -v ./...
 | Backend  | `kuzco.go`                  | Add `TruncateDirection` type + constants, `embedOpts` field, three new `With...` constructor options.        |
 | Backend  | `embeddings.go`             | Conditionally merge `truncate` / `truncate_direction` / `dimension` into the `model.D` payload.              |
 | Tests    | `embeddings_test.go`        | Unit tests for option setters, invalid-value handling, and payload-merge behavior.                           |
-| Tests    | `kuzco_embedding_test.go`   | Integration test exercising `WithEmbeddingTruncate(true)` (and `WithEmbeddingDimension` if model supports). |
-| Docs     | `CLAUDE.md`                 | One-line note that embedding options are configured on `New`, not per call.                                  |
+| Tests    | `kuzco_embedding_test.go`   | Integration test exercising `WithEmbeddingTruncate(true)` via `TruncateRoundTrip`.                            |
+| Docs     | `CLAUDE.md`, `doc.go`, `README.md` | Note that embedding options are configured on `New`, not per call; usage example; README option table + Matryoshka TODO. |
+
+---
+
+## Future Work
+
+### Matryoshka embedding-dimension option (`WithEmbeddingDimension`)
+
+A `WithEmbeddingDimension(n int)` constructor option to request a shorter output
+vector from Matryoshka-trained models was implemented in Phase 2 and exercised by a
+`MatryoshkaDimension` integration sub-test in Phase 3, then **removed** before merge
+because it did not work end-to-end: against `Qwen3-Embedding-0.6B-Q8_0`, kronk
+returned the model's native 1024-dim vector regardless of the requested dimension
+(128/256/512), so the sub-test failed for every dim except the native one.
+
+Before re-introducing the option, a follow-up should determine the root cause:
+
+- Confirm the exact request-key kronk expects in the embedding payload
+  (`dimension` vs. another name) — inspect `github.com/ardanlabs/kronk/sdk/kronk/embedding.go`.
+- Verify whether the loaded GGUF / kronk's llama.cpp build actually performs
+  Matryoshka truncation + renormalization server-side, or whether the adapter
+  must downsize + L2-renormalize the returned vector itself.
+- Add the integration assertion back (the removed `MatryoshkaDimension` sub-test
+  gated on an opt-in env var such as `EMBED_MODEL_MATRYOSHKA_DIMS`) and require it
+  to pass against a known-good Matryoshka model before shipping.
+
+**Suggested embedding models to test against** (Matryoshka-trained, GGUF available):
+
+- `nomic-embed-text-v1.5` — native 768, MRL dims 64/128/256/512/768
+  (`https://huggingface.co/nomic-ai/nomic-embed-text-v1.5-GGUF`).
+- `mxbai-embed-large-v1` — native 1024, MRL down to 512
+  (`https://huggingface.co/mixedbread-ai/mxbai-embed-large-v1`).
+- `Qwen3-Embedding-0.6B` — native 1024, MRL 32–1024
+  (`https://huggingface.co/Qwen/Qwen3-Embedding-0.6B-GGUF`); the model used here,
+  useful as the regression case for whatever fix lands.
+
+Track this as a new PRD rather than reopening this one.
 
 ---
 

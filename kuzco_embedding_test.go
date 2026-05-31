@@ -19,28 +19,20 @@
 //	                      kuzco_llm_test.go so the two runs share kronk's
 //	                      lib bundle.
 //	KRONK_HF_TOKEN        HuggingFace token for gated models.
-//	EMBED_MODEL_MATRYOSHKA_DIMS
-//	                      Comma-separated list of output dimensions (e.g.
-//	                      "128,256,512,1024") opting the MatryoshkaDimension
-//	                      sub-test in. Only meaningful when EMBED_MODEL_URL
-//	                      points at a Matryoshka-capable model; when unset the
-//	                      sub-test skips cleanly.
 //
-// Recommended embed model (small, public, Matryoshka-capable, native dim 1024):
+// Recommended embed model (small, public):
 //
 //	https://huggingface.co/Qwen/Qwen3-Embedding-0.6B-GGUF/resolve/main/Qwen3-Embedding-0.6B-Q8_0.gguf
 //
 // Example:
 //
 //	EMBED_MODEL_URL=https://huggingface.co/Qwen/Qwen3-Embedding-0.6B-GGUF/resolve/main/Qwen3-Embedding-0.6B-Q8_0.gguf \
-//	EMBED_MODEL_MATRYOSHKA_DIMS=128,256,512,1024 \
 //	  go test -tags=integration ./... -run TestEmbeddings -v
 package kuzco_test
 
 import (
 	"context"
 	"os"
-	"strconv"
 	"strings"
 	"testing"
 
@@ -168,39 +160,6 @@ func TestEmbeddings(t *testing.T) {
 		}
 		if len(vecs[0]) == 0 {
 			t.Fatalf("truncated vector is empty")
-		}
-	})
-
-	// MatryoshkaDimension proves WithEmbeddingDimension(N) round-trips through
-	// kronk against a Matryoshka-capable model. There is no clean kronk-side
-	// "is matryoshka" flag, so this opts in via EMBED_MODEL_MATRYOSHKA_DIMS and
-	// skips otherwise (e.g. against a non-Matryoshka model).
-	t.Run("MatryoshkaDimension", func(t *testing.T) {
-		dimsEnv := os.Getenv("EMBED_MODEL_MATRYOSHKA_DIMS")
-		if dimsEnv == "" {
-			t.Skip("requires a Matryoshka-capable embed model (e.g. Qwen3-Embedding-0.6B); set EMBED_MODEL_MATRYOSHKA_DIMS accordingly")
-		}
-
-		for _, ds := range strings.Split(dimsEnv, ",") {
-			ds = strings.TrimSpace(ds)
-			n, err := strconv.Atoi(ds)
-			if err != nil || n <= 0 {
-				t.Fatalf("invalid dimension %q in EMBED_MODEL_MATRYOSHKA_DIMS: %v", ds, err)
-			}
-
-			t.Run(ds, func(t *testing.T) {
-				llm := kuzco.New(k, kuzco.WithEmbeddingDimension(n))
-				vecs, err := llm.CreateEmbedding(ctx, []string{"hello"})
-				if err != nil {
-					t.Fatalf("CreateEmbedding with WithEmbeddingDimension(%d): %v", n, err)
-				}
-				if len(vecs) != 1 {
-					t.Fatalf("want 1 vector, got %d", len(vecs))
-				}
-				if len(vecs[0]) != n {
-					t.Fatalf("dimension mismatch: want %d, got %d", n, len(vecs[0]))
-				}
-			})
 		}
 	})
 }

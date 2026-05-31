@@ -62,7 +62,7 @@ README covers the in-process `kuzco` path.
 - **Chat completion** — `Call`, `GenerateContent`, and `GenerateContentStream`.
 - **Streaming** — token-by-token via `WithStreamingFunc`, plus a channel-based stream API.
 - **Tool / function calling** — langchaingo tools are translated to kronk's payload, with `ToolChoice` defaulting to `"auto"` when tools are present.
-- **Embeddings** — implements `EmbedderClient` for embed-capable GGUF models, with truncation and dimension controls.
+- **Embeddings** — implements `EmbedderClient` for embed-capable GGUF models, with truncation controls.
 - **Sensible context handling** — automatically applies a default deadline (60s) when the caller's context has none, which kronk requires.
 
 ## Installation
@@ -150,7 +150,9 @@ Pass these to `kuzco.New(k, opts...)`:
 | `WithDefaultTimeout(d time.Duration)` | Timeout applied via context when the caller's context has no deadline. | `60s` |
 | `WithEmbeddingTruncate(v bool)` | Whether kronk truncates embedding input that exceeds the model's context. Stored as a pointer so an explicit `false` differs from "unset". | unset |
 | `WithEmbeddingTruncateDirection(d TruncateDirection)` | Which end to truncate: `TruncateLeft` or `TruncateRight`. Invalid values are a silent no-op. | unset |
-| `WithEmbeddingDimension(n int)` | Output embedding dimension. Non-positive values are a silent no-op. | model default |
+
+> **TODO:** Support a Matryoshka embedding-dimension option (request a shorter
+> output vector from Matryoshka-capable models).
 
 Per-request generation parameters (max tokens, temperature, top-p, stop words,
 seed, tools, tool choice, streaming) are passed through the standard

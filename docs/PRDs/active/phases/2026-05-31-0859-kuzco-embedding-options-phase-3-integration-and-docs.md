@@ -72,25 +72,25 @@ This phase is gated on Phase 2 (helper + payload merge must exist before integra
 
 - `kuzco_embedding_test.go` — new `t.Run("TruncateRoundTrip", ...)` block.
 
-### Task 2: Conditional Matryoshka dimension sub-test
+### Task 2: Conditional Matryoshka dimension sub-test — REMOVED (deferred to Future Work)
 
-- [x] Add a fourth `t.Run("MatryoshkaDimension", ...)` sub-test that calls `t.Skip("requires a Matryoshka-capable embed model (e.g. nomic-embed-text-v1.5); set EMBED_MODEL_URL accordingly")` **unless** the loaded model is Matryoshka. There is no clean kronk-side feature flag for "is matryoshka"; gate on an opt-in env var `EMBED_MODEL_MATRYOSHKA_DIMS` (comma-separated supported dims) that the test parses and uses to drive a sub-test per dim.
-- [x] When the env var is set, for each declared dim `N`, build `*kuzco.LLM` with `kuzco.WithEmbeddingDimension(N)`, call `CreateEmbedding` with a short input, and assert the returned vector length equals `N`.
-- [x] Document the env-var contract in the file-level doc comment at the top of `kuzco_embedding_test.go` so future readers know how to opt in.
+> **Removed before merge.** The `MatryoshkaDimension` sub-test and the
+> `WithEmbeddingDimension` option it exercised were dropped: against
+> `Qwen3-Embedding-0.6B-Q8_0`, kronk returned the native 1024-dim vector
+> regardless of the requested dimension (128/256/512 all failed), so the option
+> did not round-trip. The option, its unit tests, the sub-test, and the
+> `EMBED_MODEL_MATRYOSHKA_DIMS` env-var doc were removed. Re-introducing Matryoshka
+> support (root-cause + suggested test models) is captured under **Future Work** in
+> the source PRD (`../2026-05-31-0859-kuzco-embedding-options.md`).
 
-**Acceptance Criteria:**
-
-- Sub-test skips cleanly against bge-small (the default recommended model).
-- When run with a Matryoshka model and `EMBED_MODEL_MATRYOSHKA_DIMS=128,256,512`, all three asserted vector lengths match.
-
-**Files / Areas:**
-
-- `kuzco_embedding_test.go` — new sub-test and a one-paragraph doc-comment addition near the top.
+- [x] ~~Add a `MatryoshkaDimension` sub-test gated on `EMBED_MODEL_MATRYOSHKA_DIMS`.~~ Removed.
+- [x] ~~Build `*kuzco.LLM` with `WithEmbeddingDimension(N)` and assert vector length == N.~~ Removed.
+- [x] ~~Document the env-var contract in the file-level doc comment.~~ Removed.
 
 ### Task 3: Update `CLAUDE.md` and package doc
 
-- [x] Append one bullet to `CLAUDE.md`'s "Adapter Gotchas" section: "**Embedding options are configured on `kuzco.New`, not per call** — langchaingo's `EmbedderClient.CreateEmbedding` signature has no `Option` parameter, so `WithEmbeddingTruncate`, `WithEmbeddingTruncateDirection`, and `WithEmbeddingDimension` must be passed at construction time."
-- [x] Add a package-level doc comment (placed in the existing `doc.go`, which already holds the package doc — see Note below — not in `kuzco.go`):
+- [x] Append one bullet to `CLAUDE.md`'s "Adapter Gotchas" section: "**Embedding options are configured on `kuzco.New`, not per call** — langchaingo's `EmbedderClient.CreateEmbedding` signature has no `Option` parameter, so `WithEmbeddingTruncate` and `WithEmbeddingTruncateDirection` must be passed at construction time." (As-shipped; the `WithEmbeddingDimension` mention from the original spec was dropped along with that option.)
+- [x] Add a package-level doc comment (placed in the existing `doc.go`, which already holds the package doc — see Note below — not in `kuzco.go`). As-shipped (dimension line dropped):
 
   ```go
   // Package kuzco adapts a *kronk.Kronk into a langchaingo llms.Model and
@@ -101,14 +101,13 @@ This phase is gated on Phase 2 (helper + payload merge must exist before integra
   //	llm := kuzco.New(k,
   //		kuzco.WithEmbeddingTruncate(true),
   //		kuzco.WithEmbeddingTruncateDirection(kuzco.TruncateLeft),
-  //		kuzco.WithEmbeddingDimension(256), // Matryoshka downsize
   //	)
   //
   // Per-call options are not supported because langchaingo's
   // EmbedderClient.CreateEmbedding signature does not accept variadic options.
   ```
 
-- [x] Do not create a README — none exists today.
+- [x] README: the original spec said none existed; a `README.md` was present by implementation time and was updated with the embedding-options table plus a TODO to support the Matryoshka dimension option.
 
 > **Note (deviation):** The spec assumed no package doc comment existed and placed it in `kuzco.go`. One already exists in `doc.go`. Go allows only one canonical package doc comment, so the new overview was added to the existing `doc.go` comment instead of duplicating it in `kuzco.go`. `go doc` renders it correctly.
 
@@ -170,7 +169,7 @@ go vet ./...
 - [x] All implementation tasks completed
 - [x] Acceptance criteria verified
 - [x] `go test -v -count=1 ./...` passes (unit)
-- [~] `go test -tags=integration -v -run TestEmbeddings ./...` against Qwen3-Embedding-0.6B: `EmbedDocuments`, `EmbedQuery`, and `TruncateRoundTrip` PASS; `MatryoshkaDimension/{128,256,512}` FAIL — kronk returns the native 1024-dim vector regardless of the requested `dimension` (only `/1024` passes). The `dimension` payload field is not honored end-to-end for this model/kronk version; needs follow-up (verify kronk's expected request key vs. llama.cpp Matryoshka support). `truncate` is proven to round-trip.
+- [x] `go test -tags=integration -v -run TestEmbeddings ./...` against Qwen3-Embedding-0.6B: `EmbedDocuments`, `EmbedQuery`, and `TruncateRoundTrip` PASS (`truncate` proven to round-trip). The `MatryoshkaDimension` sub-test and `WithEmbeddingDimension` option were removed (see Task 2 above) and deferred to Future Work in the source PRD.
 - [x] `go vet ./...` clean
 - [x] `CLAUDE.md` and package doc updated
 - [ ] PR merged via Conventional Commit (`feat: embedding options for kronk`)

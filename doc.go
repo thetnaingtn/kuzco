@@ -9,7 +9,6 @@
 //	llm := kuzco.New(k,
 //		kuzco.WithEmbeddingTruncate(true),
 //		kuzco.WithEmbeddingTruncateDirection(kuzco.TruncateLeft),
-//		kuzco.WithEmbeddingDimension(256), // Matryoshka downsize
 //	)
 //
 // Per-call options are not supported because langchaingo's

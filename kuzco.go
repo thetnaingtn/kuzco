@@ -33,7 +33,6 @@ const (
 type embedOpts struct {
 	truncate          *bool // nil = unset, distinct from set-to-false
 	truncateDirection TruncateDirection
-	dimension         int
 }
 
 type LLM struct {
@@ -65,16 +64,6 @@ func WithEmbeddingTruncateDirection(d TruncateDirection) Option {
 	return func(l *LLM) {
 		if d == TruncateRight || d == TruncateLeft {
 			l.embed.truncateDirection = d
-		}
-	}
-}
-
-// WithEmbeddingDimension sets the output embedding dimension. Non-positive
-// values are a silent no-op.
-func WithEmbeddingDimension(n int) Option {
-	return func(l *LLM) {
-		if n > 0 {
-			l.embed.dimension = n
 		}
 	}
 }

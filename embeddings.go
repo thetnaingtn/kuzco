@@ -37,9 +37,6 @@ func (l *LLM) buildEmbedPayload(texts []string) model.D {
 	if l.embed.truncateDirection != "" {
 		d["truncate_direction"] = string(l.embed.truncateDirection)
 	}
-	if l.embed.dimension > 0 {
-		d["dimension"] = l.embed.dimension
-	}
 	return d
 }
 
