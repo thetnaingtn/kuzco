@@ -1,6 +1,19 @@
-// Package kuzco adapts an *kronk.Kronk into a langchaingo llms.Model so
-// callers can drive a local kronk inference instance through the langchaingo
-// chat-completion surface (Call, GenerateContent, GenerateContentStream).
+// Package kuzco adapts a *kronk.Kronk into a langchaingo llms.Model and
+// embeddings.EmbedderClient, so callers can drive a local kronk inference
+// instance through langchaingo's chat-completion surface (Call,
+// GenerateContent, GenerateContentStream) and its embedding surface
+// (CreateEmbedding).
+//
+// Embedding behavior is configured via constructor options on New:
+//
+//	llm := kuzco.New(k,
+//		kuzco.WithEmbeddingTruncate(true),
+//		kuzco.WithEmbeddingTruncateDirection(kuzco.TruncateLeft),
+//		kuzco.WithEmbeddingDimension(256), // Matryoshka downsize
+//	)
+//
+// Per-call options are not supported because langchaingo's
+// EmbedderClient.CreateEmbedding signature does not accept variadic options.
 package kuzco
 
 import (

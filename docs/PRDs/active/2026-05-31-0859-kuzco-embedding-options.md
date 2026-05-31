@@ -1,7 +1,7 @@
 # Kuzco: Embedding Options (truncate, truncate_direction, dimension)
 
 **PRD ID**: PRD-2026-05-31-0859
-**Status**: Draft
+**Status**: In Review (dimension option unverified — see Summary)
 **Complexity**: Low
 **Created**: May 31, 2026
 **Author**: thetnaingtn
@@ -40,7 +40,11 @@ Implementation outline:
 
 ## Summary
 
-_To be filled in after implementation._
+Shipped across three phases. Phase 1 added the typed `TruncateDirection` (`TruncateRight`/`TruncateLeft`), the unexported `embedOpts` field on `*LLM`, and the three constructor options (`WithEmbeddingTruncate`, `WithEmbeddingTruncateDirection`, `WithEmbeddingDimension`) with zero-value/invalid-value guards. Phase 2 wired them through `buildEmbedPayload` in `embeddings.go`, merging `truncate` / `truncate_direction` / `dimension` into the kronk `model.D` only when set so the no-options payload stays byte-identical to before. Phase 3 added `integration`-tagged sub-tests `TruncateRoundTrip` (proves `WithEmbeddingTruncate(true)` rescues an over-long input the baseline rejects) and `MatryoshkaDimension` (opt-in via `EMBED_MODEL_MATRYOSHKA_DIMS`, asserts requested vector lengths), plus the `CLAUDE.md` gotcha and a package overview with usage example.
+
+Deviations from the original plan: (1) the package doc comment was added to the existing `doc.go` rather than `kuzco.go` — `doc.go` already held the canonical package comment and Go permits only one. (2) Integration was run against the user-specified `Qwen3-Embedding-0.6B-Q8_0` (native dim 1024) instead of the originally recommended `bge-small-en-v1.5`.
+
+Open finding from integration: `truncate` round-trips correctly (`TruncateRoundTrip` passes), but `WithEmbeddingDimension` does **not** take effect against Qwen3-Embedding-0.6B — kronk returns the native 1024-dim vector for requested dims 128/256/512 (only 1024 trivially matches). It is not yet confirmed whether this is a wrong request-key in `buildEmbedPayload`, a kronk version limitation, or that this GGUF doesn't expose Matryoshka truncation server-side. The PRD is therefore **not** fully verified for the `dimension` option; a follow-up should resolve this before relying on Matryoshka downsizing.
 
 ---
 
@@ -107,25 +111,25 @@ N/A — library has no UI.
 
 ### Phase 1: Option types and constructors
 
-- [ ] Add `TruncateDirection` string type and exported constants `TruncateRight` (`"right"`), `TruncateLeft` (`"left"`) in `kuzco.go`.
-- [ ] Add unexported `embedOpts` struct with `truncate *bool`, `truncateDirection TruncateDirection`, and `dimension int`, hung off `*LLM`.
-- [ ] Implement `WithEmbeddingTruncate(bool) Option` (writes to `embedOpts.truncate` via a pointer so "set to false" is distinguishable from "unset").
-- [ ] Implement `WithEmbeddingTruncateDirection(TruncateDirection) Option`; ignore invalid values (only `TruncateRight` / `TruncateLeft` apply).
-- [ ] Implement `WithEmbeddingDimension(int) Option`; ignore non-positive values (zero-value guard).
-- [ ] Unit tests in `embeddings_test.go` (or a new `options_test.go`) asserting each option mutates the struct as expected and that invalid values are no-ops.
+- [x] Add `TruncateDirection` string type and exported constants `TruncateRight` (`"right"`), `TruncateLeft` (`"left"`) in `kuzco.go`.
+- [x] Add unexported `embedOpts` struct with `truncate *bool`, `truncateDirection TruncateDirection`, and `dimension int`, hung off `*LLM`.
+- [x] Implement `WithEmbeddingTruncate(bool) Option` (writes to `embedOpts.truncate` via a pointer so "set to false" is distinguishable from "unset").
+- [x] Implement `WithEmbeddingTruncateDirection(TruncateDirection) Option`; ignore invalid values (only `TruncateRight` / `TruncateLeft` apply).
+- [x] Implement `WithEmbeddingDimension(int) Option`; ignore non-positive values (zero-value guard).
+- [x] Unit tests in `embeddings_test.go` (or a new `options_test.go`) asserting each option mutates the struct as expected and that invalid values are no-ops.
 
 ### Phase 2: Payload merge in CreateEmbedding
 
-- [ ] Update `CreateEmbedding` in `embeddings.go` to build the `model.D` map and merge `truncate` / `truncate_direction` / `dimension` only when set on `embedOpts`.
-- [ ] Keep "no opts configured" output byte-identical to today's `model.D{"input": texts}` so existing kronk default behavior is preserved.
-- [ ] Unit tests: build an `*LLM` with each option permutation and assert the produced `model.D` payload matches expectations. Use a thin seam (e.g. extract payload construction into a private helper that returns `model.D`) so the test can assert on the map without a live kronk.
+- [x] Update `CreateEmbedding` in `embeddings.go` to build the `model.D` map and merge `truncate` / `truncate_direction` / `dimension` only when set on `embedOpts`.
+- [x] Keep "no opts configured" output byte-identical to today's `model.D{"input": texts}` so existing kronk default behavior is preserved.
+- [x] Unit tests: build an `*LLM` with each option permutation and assert the produced `model.D` payload matches expectations. Use a thin seam (e.g. extract payload construction into a private helper that returns `model.D`) so the test can assert on the map without a live kronk.
 
 ### Phase 3: Integration test + docs
 
-- [ ] Add an integration test in `kuzco_embedding_test.go` that runs `CreateEmbedding` against an over-long input with `WithEmbeddingTruncate(true)` and verifies it succeeds where the unconfigured embedder would fail.
-- [ ] If the test embed model is Matryoshka-capable, add a case asserting `WithEmbeddingDimension(N)` produces vectors of length `N`; otherwise document the limitation and skip.
-- [ ] Update `CLAUDE.md` adapter-gotchas section to mention the embedding option knobs.
-- [ ] Update README (if present) or package doc comment with a short usage example.
+- [x] Add an integration test in `kuzco_embedding_test.go` that runs `CreateEmbedding` against an over-long input with `WithEmbeddingTruncate(true)` and verifies it succeeds where the unconfigured embedder would fail.
+- [x] If the test embed model is Matryoshka-capable, add a case asserting `WithEmbeddingDimension(N)` produces vectors of length `N`; otherwise document the limitation and skip.
+- [x] Update `CLAUDE.md` adapter-gotchas section to mention the embedding option knobs.
+- [x] Update README (if present) or package doc comment with a short usage example.
 
 ---
 
@@ -172,10 +176,10 @@ go test -v ./...
 
 ## Definition of Done
 
-- [ ] Implementation complete
-- [ ] Tests passing (`go test -v ./...`)
-- [ ] No new vet warnings (`go vet ./...`)
-- [ ] CLAUDE.md and package doc updated
+- [x] Implementation complete
+- [~] Tests passing — unit (`go test -v ./...`) green; integration `MatryoshkaDimension` fails (dimension not honored, see Summary)
+- [x] No new vet warnings (`go vet ./...`)
+- [x] CLAUDE.md and package doc updated
 - [ ] PR approved and merged via Conventional Commit (`feat: embedding options for kronk`)
 
 ---

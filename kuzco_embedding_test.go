@@ -19,20 +19,29 @@
 //	                      kuzco_llm_test.go so the two runs share kronk's
 //	                      lib bundle.
 //	KRONK_HF_TOKEN        HuggingFace token for gated models.
+//	EMBED_MODEL_MATRYOSHKA_DIMS
+//	                      Comma-separated list of output dimensions (e.g.
+//	                      "128,256,512,1024") opting the MatryoshkaDimension
+//	                      sub-test in. Only meaningful when EMBED_MODEL_URL
+//	                      points at a Matryoshka-capable model; when unset the
+//	                      sub-test skips cleanly.
 //
-// Recommended embed model (small, public):
+// Recommended embed model (small, public, Matryoshka-capable, native dim 1024):
 //
-//	https://huggingface.co/CompendiumLabs/bge-small-en-v1.5-gguf/resolve/main/bge-small-en-v1.5-q8_0.gguf
+//	https://huggingface.co/Qwen/Qwen3-Embedding-0.6B-GGUF/resolve/main/Qwen3-Embedding-0.6B-Q8_0.gguf
 //
 // Example:
 //
-//	EMBED_MODEL_URL=https://huggingface.co/CompendiumLabs/bge-small-en-v1.5-gguf/resolve/main/bge-small-en-v1.5-q8_0.gguf \
+//	EMBED_MODEL_URL=https://huggingface.co/Qwen/Qwen3-Embedding-0.6B-GGUF/resolve/main/Qwen3-Embedding-0.6B-Q8_0.gguf \
+//	EMBED_MODEL_MATRYOSHKA_DIMS=128,256,512,1024 \
 //	  go test -tags=integration ./... -run TestEmbeddings -v
 package kuzco_test
 
 import (
 	"context"
 	"os"
+	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/ardanlabs/kronk/sdk/kronk"
@@ -133,6 +142,65 @@ func TestEmbeddings(t *testing.T) {
 		}
 		if docDim != 0 && len(vec) != docDim {
 			t.Fatalf("dim mismatch: query=%d docs=%d", len(vec), docDim)
+		}
+	})
+
+	// TruncateRoundTrip proves WithEmbeddingTruncate(true) round-trips through
+	// kronk: an over-long input that the unconfigured adapter rejects succeeds
+	// once truncation is enabled at construction time.
+	t.Run("TruncateRoundTrip", func(t *testing.T) {
+		// ~9000 chars — comfortably past any small embed model's context window.
+		longInput := strings.Repeat("the quick brown fox jumps over the lazy dog. ", 200)
+
+		baseline := kuzco.New(k)
+		if _, err := baseline.CreateEmbedding(ctx, []string{longInput}); err == nil {
+			t.Logf("baseline embed of over-long input did not error; kronk may have truncated silently")
+			t.Skip("kronk did not surface a context-overflow error; cannot prove the truncate option changes behavior")
+		}
+
+		truncating := kuzco.New(k, kuzco.WithEmbeddingTruncate(true))
+		vecs, err := truncating.CreateEmbedding(ctx, []string{longInput})
+		if err != nil {
+			t.Fatalf("CreateEmbedding with WithEmbeddingTruncate(true): %v", err)
+		}
+		if len(vecs) != 1 {
+			t.Fatalf("want 1 vector, got %d", len(vecs))
+		}
+		if len(vecs[0]) == 0 {
+			t.Fatalf("truncated vector is empty")
+		}
+	})
+
+	// MatryoshkaDimension proves WithEmbeddingDimension(N) round-trips through
+	// kronk against a Matryoshka-capable model. There is no clean kronk-side
+	// "is matryoshka" flag, so this opts in via EMBED_MODEL_MATRYOSHKA_DIMS and
+	// skips otherwise (e.g. against a non-Matryoshka model).
+	t.Run("MatryoshkaDimension", func(t *testing.T) {
+		dimsEnv := os.Getenv("EMBED_MODEL_MATRYOSHKA_DIMS")
+		if dimsEnv == "" {
+			t.Skip("requires a Matryoshka-capable embed model (e.g. Qwen3-Embedding-0.6B); set EMBED_MODEL_MATRYOSHKA_DIMS accordingly")
+		}
+
+		for _, ds := range strings.Split(dimsEnv, ",") {
+			ds = strings.TrimSpace(ds)
+			n, err := strconv.Atoi(ds)
+			if err != nil || n <= 0 {
+				t.Fatalf("invalid dimension %q in EMBED_MODEL_MATRYOSHKA_DIMS: %v", ds, err)
+			}
+
+			t.Run(ds, func(t *testing.T) {
+				llm := kuzco.New(k, kuzco.WithEmbeddingDimension(n))
+				vecs, err := llm.CreateEmbedding(ctx, []string{"hello"})
+				if err != nil {
+					t.Fatalf("CreateEmbedding with WithEmbeddingDimension(%d): %v", n, err)
+				}
+				if len(vecs) != 1 {
+					t.Fatalf("want 1 vector, got %d", len(vecs))
+				}
+				if len(vecs[0]) != n {
+					t.Fatalf("dimension mismatch: want %d, got %d", n, len(vecs[0]))
+				}
+			})
 		}
 	})
 }
