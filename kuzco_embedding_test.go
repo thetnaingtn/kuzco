@@ -22,17 +22,18 @@
 //
 // Recommended embed model (small, public):
 //
-//	https://huggingface.co/CompendiumLabs/bge-small-en-v1.5-gguf/resolve/main/bge-small-en-v1.5-q8_0.gguf
+//	https://huggingface.co/Qwen/Qwen3-Embedding-0.6B-GGUF/resolve/main/Qwen3-Embedding-0.6B-Q8_0.gguf
 //
 // Example:
 //
-//	EMBED_MODEL_URL=https://huggingface.co/CompendiumLabs/bge-small-en-v1.5-gguf/resolve/main/bge-small-en-v1.5-q8_0.gguf \
+//	EMBED_MODEL_URL=https://huggingface.co/Qwen/Qwen3-Embedding-0.6B-GGUF/resolve/main/Qwen3-Embedding-0.6B-Q8_0.gguf \
 //	  go test -tags=integration ./... -run TestEmbeddings -v
 package kuzco_test
 
 import (
 	"context"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/ardanlabs/kronk/sdk/kronk"
@@ -133,6 +134,32 @@ func TestEmbeddings(t *testing.T) {
 		}
 		if docDim != 0 && len(vec) != docDim {
 			t.Fatalf("dim mismatch: query=%d docs=%d", len(vec), docDim)
+		}
+	})
+
+	// TruncateRoundTrip proves WithEmbeddingTruncate(true) round-trips through
+	// kronk: an over-long input that the unconfigured adapter rejects succeeds
+	// once truncation is enabled at construction time.
+	t.Run("TruncateRoundTrip", func(t *testing.T) {
+		// ~9000 chars — comfortably past any small embed model's context window.
+		longInput := strings.Repeat("the quick brown fox jumps over the lazy dog. ", 200)
+
+		baseline := kuzco.New(k)
+		if _, err := baseline.CreateEmbedding(ctx, []string{longInput}); err == nil {
+			t.Logf("baseline embed of over-long input did not error; kronk may have truncated silently")
+			t.Skip("kronk did not surface a context-overflow error; cannot prove the truncate option changes behavior")
+		}
+
+		truncating := kuzco.New(k, kuzco.WithEmbeddingTruncate(true))
+		vecs, err := truncating.CreateEmbedding(ctx, []string{longInput})
+		if err != nil {
+			t.Fatalf("CreateEmbedding with WithEmbeddingTruncate(true): %v", err)
+		}
+		if len(vecs) != 1 {
+			t.Fatalf("want 1 vector, got %d", len(vecs))
+		}
+		if len(vecs[0]) == 0 {
+			t.Fatalf("truncated vector is empty")
 		}
 	})
 }

@@ -42,22 +42,15 @@ func TestBuildEmbedPayload(t *testing.T) {
 			want: model.D{"input": texts, "truncate_direction": "right"},
 		},
 		{
-			name: "dimension 256 only",
-			opts: []Option{WithEmbeddingDimension(256)},
-			want: model.D{"input": texts, "dimension": 256},
-		},
-		{
-			name: "all three combined",
+			name: "both combined",
 			opts: []Option{
 				WithEmbeddingTruncate(true),
 				WithEmbeddingTruncateDirection(TruncateLeft),
-				WithEmbeddingDimension(256),
 			},
 			want: model.D{
 				"input":              texts,
 				"truncate":           true,
 				"truncate_direction": "left",
-				"dimension":          256,
 			},
 		},
 	}

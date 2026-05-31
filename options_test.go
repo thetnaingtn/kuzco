@@ -13,9 +13,6 @@ func TestNewDefaultEmbedOpts(t *testing.T) {
 	if l.embed.truncateDirection != "" {
 		t.Errorf("truncateDirection: want \"\", got %q", l.embed.truncateDirection)
 	}
-	if l.embed.dimension != 0 {
-		t.Errorf("dimension: want 0, got %d", l.embed.dimension)
-	}
 }
 
 func TestWithEmbeddingTruncate(t *testing.T) {
@@ -46,26 +43,6 @@ func TestWithEmbeddingTruncateDirection(t *testing.T) {
 			l := New(nil, WithEmbeddingTruncateDirection(tc.in))
 			if l.embed.truncateDirection != tc.want {
 				t.Errorf("want %q, got %q", tc.want, l.embed.truncateDirection)
-			}
-		})
-	}
-}
-
-func TestWithEmbeddingDimension(t *testing.T) {
-	tests := []struct {
-		name string
-		in   int
-		want int
-	}{
-		{"positive", 256, 256},
-		{"zero", 0, 0},
-		{"negative", -1, 0},
-	}
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			l := New(nil, WithEmbeddingDimension(tc.in))
-			if l.embed.dimension != tc.want {
-				t.Errorf("want %d, got %d", tc.want, l.embed.dimension)
 			}
 		})
 	}
