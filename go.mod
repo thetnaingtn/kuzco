@@ -4,6 +4,7 @@ go 1.26.3
 
 require (
 	github.com/ardanlabs/kronk v1.26.1
+	github.com/google/go-cmp v0.7.0
 	github.com/tmc/langchaingo v0.1.14
 )
 

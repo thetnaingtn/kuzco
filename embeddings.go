@@ -17,11 +17,30 @@ func (l *LLM) CreateEmbedding(ctx context.Context, texts []string) ([][]float32,
 	}
 	ctx, cancel := l.ensureDeadline(ctx)
 	defer cancel()
-	resp, err := l.k.Embeddings(ctx, model.D{"input": texts})
+	d := l.buildEmbedPayload(texts)
+	resp, err := l.k.Embeddings(ctx, d)
 	if err != nil {
 		return nil, fmt.Errorf("kuzco: embeddings: %w", err)
 	}
 	return embedResponseToVectors(resp), nil
+}
+
+// buildEmbedPayload materialises the kronk embedding request map for texts and
+// merges any configured embedding options. The key names match kronk's
+// documented strings (see kronk/sdk/kronk/embedding.go). When no options are
+// set the payload is exactly model.D{"input": texts}.
+func (l *LLM) buildEmbedPayload(texts []string) model.D {
+	d := model.D{"input": texts}
+	if l.embed.truncate != nil {
+		d["truncate"] = *l.embed.truncate
+	}
+	if l.embed.truncateDirection != "" {
+		d["truncate_direction"] = string(l.embed.truncateDirection)
+	}
+	if l.embed.dimension > 0 {
+		d["dimension"] = l.embed.dimension
+	}
+	return d
 }
 
 func embedResponseToVectors(resp model.EmbedReponse) [][]float32 {
