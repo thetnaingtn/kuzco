@@ -16,6 +16,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Work is driven by phased PRDs under `docs/PRDs/`. Each PR typically maps to one phase (see merge history `feat: ...(#N)`). Move spec files between `active/` and `done/` as phases complete.
 - Commits use Conventional Commits: `feat:`, `fix:`, `chore:`, etc.
 - **Always** use the *Explore* subagent when looking for specific kronk or langchaingo functions, files, methods etc.
+- After a phase is successfully implemented, update it **Status** to **Completed**. A PRD **Status** have to update to **Completed** after all of its phases are **Completed** and update it summary.
 
 ## Adapter Gotchas
 
