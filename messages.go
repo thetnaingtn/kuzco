@@ -128,6 +128,38 @@ func applyCallOptions(d model.D, opts llms.CallOptions) {
 	if opts.StreamingFunc != nil {
 		d["stream"] = true
 	}
+	applyThinking(d, &opts)
+}
+
+// applyThinking maps langchaingo's thinking config onto kronk's reasoning
+// controls. Kronk gates reasoning two ways: enable_thinking ("true"/"false")
+// for most non-GPT models, and reasoning_effort for GPT-family models. Both
+// reasoning and response content draw from the same max_tokens budget, so a
+// small budget paired with kronk's default ("thinking on") can leave no room
+// for the answer — callers disable thinking via WithThinkingMode(ThinkingModeNone).
+//
+// ThinkingModeAuto and an unset mode are left alone so kronk applies its own
+// model-appropriate defaults.
+func applyThinking(d model.D, opts *llms.CallOptions) {
+	cfg := llms.GetThinkingConfig(opts)
+	if cfg == nil {
+		return
+	}
+
+	switch cfg.Mode {
+	case llms.ThinkingModeNone:
+		d["enable_thinking"] = "false"
+		d["reasoning_effort"] = model.ReasoningEffortNone
+	case llms.ThinkingModeLow:
+		d["enable_thinking"] = "true"
+		d["reasoning_effort"] = model.ReasoningEffortLow
+	case llms.ThinkingModeMedium:
+		d["enable_thinking"] = "true"
+		d["reasoning_effort"] = model.ReasoningEffortMedium
+	case llms.ThinkingModeHigh:
+		d["enable_thinking"] = "true"
+		d["reasoning_effort"] = model.ReasoningEffortHigh
+	}
 }
 
 func chatResponseToContent(resp model.ChatResponse) *llms.ContentResponse {
