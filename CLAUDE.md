@@ -1,22 +1,24 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
-
 ## Project
 
 `github.com/thetnaingtn/kuzco` — a Go adapter that wraps `github.com/ardanlabs/kronk` (local LLM inference) to satisfy `github.com/tmc/langchaingo`'s `llms.Model` and embedder interfaces. Flat single-package layout at the repo root.
 
 ## Commands
 
-- Tests: `go test -v ./...` — run the full suite (unit + integration). Integration tests download GGUF model files and llama.cpp libs at runtime via the `MODEL_URL` env var; they skip cleanly when network is unavailable.
-- Build: standard `go build ./...`. No Makefile.
+- Use `make run-tests` to run all the unit tests.
+- Use `make run-llm-test` to run LLM model integration test. Use this when any changes related to kuzco implmentation of llms.Model interface was made.
+- Use `make run-embedding-test` to run embedding integration test. Use this when any changes related to kuzco implementation of embeddings.EmbedderClient was made
+
 
 ## Workflow
 
+- TDD is mendatory. No Exception.
 - Work is driven by phased PRDs under `docs/PRDs/`. Each PR typically maps to one phase (see merge history `feat: ...(#N)`). Move spec files between `active/` and `done/` as phases complete.
 - Commits use Conventional Commits: `feat:`, `fix:`, `chore:`, etc.
 - **Always** use the *Explore* subagent when looking for specific kronk or langchaingo functions, files, methods etc.
 - After a phase is successfully implemented, update it **Status** to **Completed**. A PRD **Status** have to update to **Completed** after all of its phases are **Completed** and update it summary.
+- Update the README.md when new configuration options was added, implement new interface etc.
 
 ## Adapter Gotchas
 
