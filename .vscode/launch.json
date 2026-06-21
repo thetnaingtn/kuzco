@@ -1,0 +1,39 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug Test Function",
+      "type": "go",
+      "request": "launch",
+      "mode": "test",
+      "program": "${workspaceFolder}",
+      "buildFlags": "-tags=integration",
+      "args": ["-test.run", "${selectedText}", "-test.v"],
+      "env": {
+        "MODEL_URL": ""
+      }
+    },
+    {
+      "name": "Debug Current Test File",
+      "type": "go",
+      "request": "launch",
+      "mode": "test",
+      "program": "${fileDirname}",
+      "buildFlags": ["-tags=integration"],
+      "args": ["-test.v"],
+      "envFile": "${workspaceFolder}/.vscode/.env"
+    },
+    {
+      "name": "Debug All Tests",
+      "type": "go",
+      "request": "launch",
+      "mode": "test",
+      "program": "${workspaceFolder}",
+      "buildFlags": "-tags=integration",
+      "args": ["-test.v"],
+      "env": {
+        "MODEL_URL": ""
+      }
+    }
+  ]
+}
