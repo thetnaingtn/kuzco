@@ -297,6 +297,76 @@ func TestApplyCallOptions(t *testing.T) {
 	})
 }
 
+func TestApplyThinking(t *testing.T) {
+	// optsWithMode builds CallOptions carrying the thinking config the way
+	// langchaingo callers do: by applying the WithThinkingMode option.
+	optsWithMode := func(mode llms.ThinkingMode) llms.CallOptions {
+		co := llms.CallOptions{}
+		llms.WithThinkingMode(mode)(&co)
+		return co
+	}
+
+	t.Run("modes map to kronk reasoning controls", func(t *testing.T) {
+		cases := []struct {
+			mode         llms.ThinkingMode
+			wantEnable   string
+			wantReasonEf string
+		}{
+			{llms.ThinkingModeNone, "false", model.ReasoningEffortNone},
+			{llms.ThinkingModeLow, "true", model.ReasoningEffortLow},
+			{llms.ThinkingModeMedium, "true", model.ReasoningEffortMedium},
+			{llms.ThinkingModeHigh, "true", model.ReasoningEffortHigh},
+		}
+		for _, tc := range cases {
+			t.Run(string(tc.mode), func(t *testing.T) {
+				d := model.D{}
+				co := optsWithMode(tc.mode)
+				applyThinking(d, &co)
+
+				if d["enable_thinking"] != tc.wantEnable {
+					t.Fatalf("enable_thinking: want %q, got %v", tc.wantEnable, d["enable_thinking"])
+				}
+				if d["reasoning_effort"] != tc.wantReasonEf {
+					t.Fatalf("reasoning_effort: want %q, got %v", tc.wantReasonEf, d["reasoning_effort"])
+				}
+			})
+		}
+	})
+
+	t.Run("auto leaves kronk defaults untouched", func(t *testing.T) {
+		d := model.D{}
+		co := optsWithMode(llms.ThinkingModeAuto)
+		applyThinking(d, &co)
+		if _, ok := d["enable_thinking"]; ok {
+			t.Fatalf("want enable_thinking unset for auto, got %v", d["enable_thinking"])
+		}
+		if _, ok := d["reasoning_effort"]; ok {
+			t.Fatalf("want reasoning_effort unset for auto, got %v", d["reasoning_effort"])
+		}
+	})
+
+	t.Run("no thinking config is a no-op", func(t *testing.T) {
+		d := model.D{}
+		co := llms.CallOptions{}
+		applyThinking(d, &co)
+		if len(d) != 0 {
+			t.Fatalf("want empty d when no thinking config, got %+v", d)
+		}
+	})
+
+	t.Run("applied via applyCallOptions", func(t *testing.T) {
+		d := model.D{}
+		co := optsWithMode(llms.ThinkingModeNone)
+		applyCallOptions(d, co)
+		if d["enable_thinking"] != "false" {
+			t.Fatalf("enable_thinking: want %q, got %v", "false", d["enable_thinking"])
+		}
+		if d["reasoning_effort"] != model.ReasoningEffortNone {
+			t.Fatalf("reasoning_effort: want %q, got %v", model.ReasoningEffortNone, d["reasoning_effort"])
+		}
+	})
+}
+
 func TestChatResponseToContent(t *testing.T) {
 	t.Run("text choice with usage", func(t *testing.T) {
 		finish := "stop"
