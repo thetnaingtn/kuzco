@@ -1,0 +1,34 @@
+# kuzco is a library, not a binary, so there is nothing to compile or archive.
+# goreleaser is used purely to cut a GitHub release with a generated changelog
+# when a v* tag is pushed.
+version: 2
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - skip: true
+
+changelog:
+  use: github
+  sort: asc
+  groups:
+    - title: Features
+      regexp: '^.*?feat(\([[:word:]]+\))??!?:.+$'
+      order: 0
+    - title: Bug fixes
+      regexp: '^.*?fix(\([[:word:]]+\))??!?:.+$'
+      order: 1
+    - title: Others
+      order: 999
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+      - "merge conflict"
+      - "^Merge "
+
+release:
+  prerelease: auto
