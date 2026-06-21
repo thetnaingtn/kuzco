@@ -163,6 +163,31 @@ seed, tools, tool choice, streaming) are passed through the standard
 langchaingo [`llms.CallOption`](https://pkg.go.dev/github.com/tmc/langchaingo/llms#CallOption)
 values at call time, e.g. `llms.WithTemperature(0.7)`.
 
+### Reasoning / thinking budget
+
+`llms.WithThinkingMode` controls reasoning on thinking-capable models. kuzco maps
+it to kronk's `enable_thinking` and `reasoning_effort` controls:
+
+| `ThinkingMode` | `enable_thinking` | `reasoning_effort` |
+| --- | --- | --- |
+| `ThinkingModeNone` | `false` | `none` |
+| `ThinkingModeLow` | `true` | `low` |
+| `ThinkingModeMedium` | `true` | `medium` |
+| `ThinkingModeHigh` | `true` | `high` |
+| `ThinkingModeAuto` / unset | _(kronk default)_ | _(kronk default)_ |
+
+Reasoning and response content draw from the **same `max_tokens` budget** — kronk
+has no separate reasoning budget. With kronk's default ("thinking on") and a small
+`max_tokens`, the model can spend the entire budget reasoning and return empty
+content. When you need every token for the answer, disable thinking:
+
+```go
+resp, err := llm.GenerateContent(ctx, messages,
+    llms.WithMaxTokens(200),
+    llms.WithThinkingMode(llms.ThinkingModeNone),
+)
+```
+
 ## How it works
 
 `kuzco` translates langchaingo types into kronk's request payloads

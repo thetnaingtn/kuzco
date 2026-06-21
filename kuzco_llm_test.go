@@ -52,9 +52,10 @@ import (
 	kmodel "github.com/ardanlabs/kronk/sdk/kronk/model"
 	"github.com/ardanlabs/kronk/sdk/tools/libs"
 	"github.com/ardanlabs/kronk/sdk/tools/models"
-	"github.com/tmc/langchaingo/testing/llmtest"
+	"github.com/tmc/langchaingo/llms"
 
 	"github.com/thetnaingtn/kuzco"
+	"github.com/thetnaingtn/kuzco/llmtest"
 )
 
 func TestLLM(t *testing.T) {
@@ -127,5 +128,11 @@ func TestLLM(t *testing.T) {
 		}
 	})
 
-	llmtest.TestLLM(t, kuzco.New(k))
+	// Disable thinking for the suite. kronk runs reasoning on by default, and
+	// reasoning + answer share the same max_tokens budget; the suite's prompts
+	// use very small budgets (10–50 tokens), so a reasoning model spends the
+	// whole budget thinking and emits no content. ThinkingModeNone hands the
+	// entire budget to the response. The local llmtest fork threads this option
+	// into every subtest (the dedicated Reasoning subtest re-enables thinking).
+	llmtest.TestLLM(t, kuzco.New(k), llms.WithThinkingMode(llms.ThinkingModeNone))
 }
