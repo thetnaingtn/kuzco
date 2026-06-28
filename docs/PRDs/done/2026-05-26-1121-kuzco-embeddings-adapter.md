@@ -1,7 +1,7 @@
 # Kuzco: langchaingo `embeddings.EmbedderClient` Adapter
 
 **PRD ID**: PRD-2026-05-26-1121
-**Status**: Draft
+**Status**: Completed
 **Complexity**: Low
 **Created**: May 26, 2026
 **Author**: thetnaingtn
@@ -45,7 +45,7 @@ vec, err := embedder.EmbedQuery(ctx, "hello")
 
 ## Summary
 
-_Filled in after implementation is complete._
+Shipped. `*kuzco.LLM` now satisfies `embeddings.EmbedderClient` via `(*LLM).CreateEmbedding(ctx, []string) ([][]float32, error)` in `embeddings.go`, with the `embedResponseToVectors` mapper sorting by `EmbedData.Index` and an empty-input typed error. The compile-time assertion `var _ embeddings.EmbedderClient = (*LLM)(nil)` is in place, `doc.go` documents the `embeddings.NewEmbedder(kuzco.New(k))` usage, and model-free unit tests plus an `EMBED_MODEL_URL`-gated integration test cover the path (merged in #10). The deferred embedding options (`truncate` / `truncate_direction`) followed up in PRD-2026-05-31-0859 (#7, #8) and are configured at construction via `WithEmbeddingTruncate` / `WithEmbeddingTruncateDirection`.
 
 ---
 
