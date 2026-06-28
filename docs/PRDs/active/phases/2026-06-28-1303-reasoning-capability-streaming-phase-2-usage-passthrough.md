@@ -3,7 +3,7 @@
 **Source PRD**: ../2026-06-28-1303-reasoning-capability-streaming.md
 **PRD ID**: PRD-2026-06-28-1303
 **Phase**: 2 of 3
-**Status**: Ready
+**Status**: Completed
 **Created**: June 28, 2026
 **Author**: thetnaingtn
 
@@ -52,12 +52,12 @@ under-report reasoning usage. The addition follows the existing zero-skip patter
 
 ### Task 1: Failing test for `ReasoningTokens` in `GenerationInfo`
 
-- [ ] In `messages_test.go` (package `kuzco`), add a test that builds a `model.ChatResponse` with
+- [x] In `messages_test.go` (package `kuzco`), add a test that builds a `model.ChatResponse` with
       `Usage{ReasoningTokens: 7, ...}`, calls `chatResponseToContent`, and asserts
       `Choices[0].GenerationInfo["ReasoningTokens"] == 7`.
-- [ ] Add a zero case: `Usage{ReasoningTokens: 0}` → key absent from `GenerationInfo`.
-- [ ] Optionally assert `llms.ExtractThinkingTokens(gi).ThinkingTokens == 7` to prove round-trip.
-- [ ] Confirm the non-zero case fails before Task 2.
+- [x] Add a zero case: `Usage{ReasoningTokens: 0}` → key absent from `GenerationInfo`.
+- [x] Optionally assert `llms.ExtractThinkingTokens(gi).ThinkingTokens == 7` to prove round-trip.
+- [x] Confirm the non-zero case fails before Task 2.
 
 **Acceptance Criteria:**
 
@@ -69,7 +69,7 @@ under-report reasoning usage. The addition follows the existing zero-skip patter
 
 ### Task 2: Add the `ReasoningTokens` key
 
-- [ ] In `chatResponseToContent` (`messages.go`), inside the `if u := resp.Usage; u != nil` block,
+- [x] In `chatResponseToContent` (`messages.go`), inside the `if u := resp.Usage; u != nil` block,
       add:
       ```go
       if u.ReasoningTokens != 0 {
@@ -118,9 +118,9 @@ go vet ./...
 
 ## Definition of Done
 
-- [ ] Tests added and pass
-- [ ] `make run-tests` green
-- [ ] `go vet ./...` clean
+- [x] Tests added and pass
+- [x] `make run-tests` green
+- [x] `go vet ./...` clean
 
 ---
 

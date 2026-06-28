@@ -404,6 +404,40 @@ func TestChatResponseToContent(t *testing.T) {
 		}
 	})
 
+	t.Run("reasoning tokens passthrough", func(t *testing.T) {
+		resp := model.ChatResponse{
+			Choices: []model.Choice{{
+				Message: &model.ResponseMessage{Role: "assistant", Content: "hi"},
+			}},
+			Usage: &model.Usage{ReasoningTokens: 7},
+		}
+		c := chatResponseToContent(resp).Choices[0]
+		v, ok := c.GenerationInfo["ReasoningTokens"]
+		if !ok {
+			t.Fatalf("GenerationInfo missing ReasoningTokens: %+v", c.GenerationInfo)
+		}
+		if v != 7 {
+			t.Fatalf("want ReasoningTokens=7, got %v", v)
+		}
+		// langchaingo round-trips this key via ExtractThinkingTokens.
+		if got := llms.ExtractThinkingTokens(c.GenerationInfo).ThinkingTokens; got != 7 {
+			t.Fatalf("want ThinkingTokens=7, got %d", got)
+		}
+	})
+
+	t.Run("reasoning tokens absent when zero", func(t *testing.T) {
+		resp := model.ChatResponse{
+			Choices: []model.Choice{{
+				Message: &model.ResponseMessage{Role: "assistant", Content: "hi"},
+			}},
+			Usage: &model.Usage{ReasoningTokens: 0, PromptTokens: 3},
+		}
+		c := chatResponseToContent(resp).Choices[0]
+		if _, ok := c.GenerationInfo["ReasoningTokens"]; ok {
+			t.Fatalf("ReasoningTokens should be absent when zero: %+v", c.GenerationInfo)
+		}
+	})
+
 	t.Run("tool call choice", func(t *testing.T) {
 		resp := model.ChatResponse{
 			Choices: []model.Choice{{
