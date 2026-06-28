@@ -15,6 +15,7 @@ import (
 var (
 	_ llms.Model                = (*LLM)(nil)
 	_ embeddings.EmbedderClient = (*LLM)(nil)
+	_ llms.ReasoningModel       = (*LLM)(nil)
 )
 
 // TruncateDirection selects which end kronk truncates when embedding input
@@ -77,6 +78,20 @@ func New(k *kronk.Kronk, opts ...Option) *LLM {
 		o(l)
 	}
 	return l
+}
+
+// SupportsReasoning reports whether the model emits reasoning ("thinking")
+// tokens, satisfying langchaingo's llms.ReasoningModel interface for runtime
+// feature detection via llms.SupportsReasoningModel.
+//
+// It always returns true. kronk enables reasoning by default and exposes no
+// per-model capability flag (there is no IsReasoningModel analogue to the
+// IsEmbedModel flag used for embeddings), so kuzco cannot distinguish a
+// genuine reasoning model from one that never thinks. Reporting true
+// unconditionally is the honest answer given that constraint; callers wanting
+// finer-grained detection should inspect the model name themselves.
+func (l *LLM) SupportsReasoning() bool {
+	return true
 }
 
 func (l *LLM) Call(ctx context.Context, prompt string, options ...llms.CallOption) (string, error) {

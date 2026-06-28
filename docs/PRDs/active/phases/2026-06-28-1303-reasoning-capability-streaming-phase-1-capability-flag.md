@@ -3,7 +3,7 @@
 **Source PRD**: ../2026-06-28-1303-reasoning-capability-streaming.md
 **PRD ID**: PRD-2026-06-28-1303
 **Phase**: 1 of 3
-**Status**: Ready
+**Status**: Completed
 **Created**: June 28, 2026
 **Author**: thetnaingtn
 
@@ -112,9 +112,9 @@ go vet ./...
 
 ## Definition of Done
 
-- [ ] Test added and passes
-- [ ] `make run-tests` green
-- [ ] `go vet ./...` clean
+- [x] Test added and passes
+- [x] `make run-tests` green
+- [x] `go vet ./...` clean
 
 ---
 
