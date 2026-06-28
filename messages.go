@@ -198,6 +198,9 @@ func chatResponseToContent(resp model.ChatResponse) *llms.ContentResponse {
 			if u.TotalTokens != 0 {
 				gi["TotalTokens"] = u.TotalTokens
 			}
+			if u.ReasoningTokens != 0 {
+				gi["ReasoningTokens"] = u.ReasoningTokens
+			}
 			if len(gi) > 0 {
 				cc.GenerationInfo = gi
 			}
